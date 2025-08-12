@@ -2,26 +2,28 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Eye, ChevronLeft, ChevronRight, Building, MapPin } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, Building, MapPin, Download } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { WaitlistEntry } from '../types/api';
+import { waitlistToCSV, downloadCSV } from '../utils/csvExport';
 
 export function Waitlist() {
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 20,
+    perPage: 5,
     totalPages: 1,
     totalItems: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const fetchWaitlist = async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getWaitlist(page, 20);
+      const response = await apiService.getWaitlist(page, 5);
       console.log('Waitlist API Response:', response); // Debug log
       
       // Based on API response: response.data is array, response.pagination is object
@@ -33,7 +35,7 @@ export function Waitlist() {
         setWaitlist([]);
         setPagination({
           currentPage: 1,
-          perPage: 20,
+          perPage: 5,
           totalPages: 1,
           totalItems: 0,
         });
@@ -53,6 +55,23 @@ export function Waitlist() {
 
   const handlePageChange = (page: number) => {
     fetchWaitlist(page);
+  };
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const response = await apiService.getAllWaitlist();
+      if (response.data && Array.isArray(response.data)) {
+        const csvContent = waitlistToCSV(response.data);
+        const timestamp = new Date().toISOString().split('T')[0];
+        downloadCSV(csvContent, `waitlist-${timestamp}.csv`);
+      }
+    } catch (error) {
+      console.error('Failed to export waitlist:', error);
+      setError('Failed to export waitlist. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const getBusinessName = (entry: WaitlistEntry) => 
@@ -107,8 +126,18 @@ export function Waitlist() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Waitlist</h1>
-        <div className="text-sm text-muted-foreground">
-          {pagination.totalItems} vendor applications
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {pagination.totalItems} vendor applications
+          </div>
+          <Button 
+            onClick={handleExportCSV} 
+            disabled={exporting || waitlist.length === 0}
+            variant="outline"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </Button>
         </div>
       </div>
 

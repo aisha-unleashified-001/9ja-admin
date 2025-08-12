@@ -146,6 +146,19 @@ class ApiService {
       `/backoffice/vendors/waitlist/${id}`
     );
   }
+
+  // Export methods - fetch all data for CSV export
+  async getAllContacts(): Promise<PaginatedApiResponse<Contact>> {
+    return this.request<PaginatedApiResponse<Contact>>(
+      `/backoffice/vendors/contacts?page=1&perPage=10000`
+    );
+  }
+
+  async getAllWaitlist(): Promise<PaginatedApiResponse<WaitlistEntry>> {
+    return this.request<PaginatedApiResponse<WaitlistEntry>>(
+      `/backoffice/vendors/waitlist?page=1&perPage=10000`
+    );
+  }
 }
 
 export const apiService = new ApiService();

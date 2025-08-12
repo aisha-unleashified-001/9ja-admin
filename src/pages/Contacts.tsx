@@ -8,26 +8,28 @@ import {
   CardTitle,
 } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { apiService } from "../services/api";
 import type { Contact } from "../types/api";
+import { contactsToCSV, downloadCSV } from "../utils/csvExport";
 
 export function Contacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 20,
+    perPage: 5,
     totalPages: 1,
     totalItems: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const fetchContacts = async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getContacts(page, 20);
+      const response = await apiService.getContacts(page, 5);
       console.log("API Response:", response); // Debug log
 
       // Based on your API response: response.data is array, response.pagination is object
@@ -39,7 +41,7 @@ export function Contacts() {
         setContacts([]);
         setPagination({
           currentPage: 1,
-          perPage: 20,
+          perPage: 5,
           totalPages: 1,
           totalItems: 0,
         });
@@ -61,6 +63,23 @@ export function Contacts() {
 
   const handlePageChange = (page: number) => {
     fetchContacts(page);
+  };
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const response = await apiService.getAllContacts();
+      if (response.data && Array.isArray(response.data)) {
+        const csvContent = contactsToCSV(response.data);
+        const timestamp = new Date().toISOString().split("T")[0];
+        downloadCSV(csvContent, `contacts-${timestamp}.csv`);
+      }
+    } catch (error) {
+      console.error("Failed to export contacts:", error);
+      setError("Failed to export contacts. Please try again.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
@@ -100,8 +119,18 @@ export function Contacts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Contacts</h1>
-        <div className="text-sm text-muted-foreground">
-          {pagination.totalItems} total contacts
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {pagination.totalItems} total contacts
+          </div>
+          <Button
+            onClick={handleExportCSV}
+            disabled={exporting || contacts.length === 0}
+            variant="outline"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {exporting ? "Exporting..." : "Export CSV"}
+          </Button>
         </div>
       </div>
 
