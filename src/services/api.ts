@@ -3,6 +3,11 @@ import type {
   PaginatedApiResponse,
   Contact,
   WaitlistEntry,
+  VendorSignup,
+  BusinessCategory,
+  ProductCategory,
+  CreateCategoryRequest,
+  CreateProductCategoryRequest,
   LoginCredentials,
   LoginResponse,
 } from "../types/api";
@@ -68,35 +73,115 @@ class ApiService {
     }
   }
 
+  private async requestWithBasicAuth<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const basicAuthCredentials = btoa('admin@example.com:admin123');
+
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": `Basic ${basicAuthCredentials}`,
+      ...options.headers,
+    };
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        mode: "cors",
+      });
+
+      if (!response.ok) {
+        // Handle authentication errors
+        if (response.status === 401) {
+          this.handleAuthError();
+          throw new Error("Session expired. Please log in again.");
+        }
+
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP ${response.status}: ${errorText || response.statusText}`
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        throw new Error(
+          "Network error: Unable to connect to the server. Please check your connection or try again later."
+        );
+      }
+      throw error;
+    }
+  }
+
   // Auth
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await this.request<LoginResponse>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        emailAddress: credentials.email,
-        password: credentials.password,
-      }),
-    });
+    const url = `${API_BASE_URL}/backoffice/login`;
+    
+    // Create Basic Auth header for login endpoint
+    const basicAuthCredentials = btoa('admin@example.com:admin123');
+    
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": `Basic ${basicAuthCredentials}`,
+    };
 
-    if (response.token) {
-      const { setAuth } = useAuthStore.getState();
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        mode: "cors",
+        body: JSON.stringify({
+          emailAddress: credentials.email,
+          password: credentials.password,
+        }),
+      });
 
-      // Create a user object from the email since backend doesn't provide user info
-      const user = {
-        id: "user-" + Date.now(), // Temporary ID
-        email: credentials.email,
-        name: credentials.email.split("@")[0], // Use email prefix as name
-      };
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `HTTP ${response.status}: ${errorText || response.statusText}`
+        );
+      }
 
-      setAuth(response.token, user);
+      const loginResponse: LoginResponse = await response.json();
 
-      // Keep localStorage for backward compatibility
-      localStorage.setItem("auth_token", response.token);
-    } else {
-      throw new Error("Login failed: No token received from server");
+      if (loginResponse.token) {
+        const { setAuth } = useAuthStore.getState();
+
+        // Create a user object from the email since backend doesn't provide user info
+        const user = {
+          id: "user-" + Date.now(), // Temporary ID
+          email: credentials.email,
+          name: credentials.email.split("@")[0], // Use email prefix as name
+        };
+
+        setAuth(loginResponse.token, user);
+
+        // Keep localStorage for backward compatibility
+        localStorage.setItem("auth_token", loginResponse.token);
+      } else {
+        throw new Error("Login failed: No token received from server");
+      }
+
+      return loginResponse;
+    } catch (error) {
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        throw new Error(
+          "Network error: Unable to connect to the server. Please check your connection or try again later."
+        );
+      }
+      throw error;
     }
-
-    return response;
   }
 
   logout() {
@@ -157,6 +242,86 @@ class ApiService {
   async getAllWaitlist(): Promise<PaginatedApiResponse<WaitlistEntry>> {
     return this.request<PaginatedApiResponse<WaitlistEntry>>(
       `/backoffice/vendors/waitlist?page=1&perPage=10000`
+    );
+  }
+
+  // Vendor Signups
+  async getVendorSignups(
+    page = 1,
+    perPage = 20
+  ): Promise<PaginatedApiResponse<VendorSignup>> {
+    return this.request<PaginatedApiResponse<VendorSignup>>(
+      `/backoffice/vendors/signup?page=${page}&perPage=${perPage}`
+    );
+  }
+
+  async getVendorSignup(id: string): Promise<ApiResponse<VendorSignup>> {
+    return this.request<ApiResponse<VendorSignup>>(
+      `/backoffice/vendors/signup/${id}`
+    );
+  }
+
+  async toggleVendorStatus(id: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/signup/status/${id}`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  async getAllVendorSignups(): Promise<PaginatedApiResponse<VendorSignup>> {
+    return this.request<PaginatedApiResponse<VendorSignup>>(
+      `/backoffice/vendors/signup?page=1&perPage=10000`
+    );
+  }
+
+  // Business Categories (using Basic Auth)
+  async getBusinessCategories(): Promise<ApiResponse<BusinessCategory[]>> {
+    return this.requestWithBasicAuth<ApiResponse<BusinessCategory[]>>(
+      `/business/get-categories`
+    );
+  }
+
+  async getBusinessCategory(id: string): Promise<ApiResponse<BusinessCategory>> {
+    return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
+      `/business/category/${id}`
+    );
+  }
+
+  async createBusinessCategory(data: CreateCategoryRequest): Promise<ApiResponse<BusinessCategory>> {
+    return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
+      `/business/category`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // Product Categories (using Basic Auth)
+  async getProductCategories(
+    page = 1,
+    perPage = 20
+  ): Promise<PaginatedApiResponse<ProductCategory>> {
+    return this.requestWithBasicAuth<PaginatedApiResponse<ProductCategory>>(
+      `/product/category?page=${page}&perPage=${perPage}`
+    );
+  }
+
+  async createProductCategory(data: CreateProductCategoryRequest): Promise<ApiResponse<ProductCategory>> {
+    return this.requestWithBasicAuth<ApiResponse<ProductCategory>>(
+      `/product/category/create`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async getAllProductCategories(): Promise<PaginatedApiResponse<ProductCategory>> {
+    return this.requestWithBasicAuth<PaginatedApiResponse<ProductCategory>>(
+      `/product/category?page=1&perPage=10000`
     );
   }
 }

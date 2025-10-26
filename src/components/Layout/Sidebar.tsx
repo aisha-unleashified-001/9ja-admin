@@ -3,6 +3,9 @@ import {
   LayoutDashboard, 
   Users, 
   MessageSquare, 
+  UserPlus,
+  Tag,
+  Package,
   LogOut,
   Menu,
   X
@@ -18,6 +21,9 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Vendor Signups', href: '/dashboard/vendor-signups', icon: UserPlus },
+  { name: 'Business Categories', href: '/dashboard/business-categories', icon: Tag },
+  { name: 'Product Categories', href: '/dashboard/product-categories', icon: Package },
   { name: 'Waitlist', href: '/dashboard/waitlist', icon: Users },
   { name: 'Contacts', href: '/dashboard/contacts', icon: MessageSquare },
 ];

@@ -72,6 +72,48 @@ export interface WaitlistEntry {
   updatedAt?: string;
 }
 
+export interface VendorSignup {
+  id: string;
+  vendorId: string;
+  fullName: string;
+  emailAddress: string;
+  phoneNumber: string | null;
+  businessName: string | null;
+  businessCategory: string | null;
+  businessRegNumber: string | null;
+  storeName: string | null;
+  businessAddress: string | null;
+  taxIdNumber: string | null;
+  idDocument: string | null;
+  businessRegCertificate: string | null;
+  isActive: string; // "0" or "1"
+  createdAt: string;
+  updatedAt: string;
+  businessCategoryName: string | null;
+}
+
+export interface BusinessCategory {
+  id: string;
+  categoryName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCategoryRequest {
+  categoryName: string;
+}
+
+export interface ProductCategory {
+  categoryId: string;
+  categoryName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductCategoryRequest {
+  categoryName: string;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
