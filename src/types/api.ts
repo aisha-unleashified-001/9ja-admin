@@ -73,7 +73,7 @@ export interface WaitlistEntry {
 }
 
 export interface VendorSignup {
-  id: string;
+  id?: string; // Only present in single vendor endpoint
   vendorId: string;
   fullName: string;
   emailAddress: string;
@@ -87,6 +87,10 @@ export interface VendorSignup {
   idDocument: string | null;
   businessRegCertificate: string | null;
   isActive: string; // "0" or "1"
+  isApproved: string; // "0" or "1"
+  approvedAt: string | null;
+  isSuspended: string; // "0" or "1"
+  suspendedAt: string | null;
   createdAt: string;
   updatedAt: string;
   businessCategoryName: string | null;
@@ -112,6 +116,11 @@ export interface ProductCategory {
 
 export interface CreateProductCategoryRequest {
   categoryName: string;
+}
+
+export interface SuspendVendorRequest {
+  suspensionReason: string;
+  requiredActions: string[];
 }
 
 export interface LoginCredentials {

@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Plus, Package, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Input } from '../components/ui/Input';
+import { Plus, Package, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { ProductCategory } from '../types/api';
 
 export function ProductCategories() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<ProductCategory[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 20,
+    perPage: 5,
     totalPages: 1,
     totalItems: 0,
   });
@@ -21,23 +24,25 @@ export function ProductCategories() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getProductCategories(page, 20);
+      const response = await apiService.getProductCategories(page, 5);
       console.log('Product Categories API Response:', response);
       
       if (response.data && Array.isArray(response.data)) {
         setCategories(response.data);
+        setFilteredCategories(response.data);
         setPagination(response.pagination || {
           currentPage: 1,
-          perPage: 20,
+          perPage: 5,
           totalPages: 1,
           totalItems: response.data.length,
         });
       } else {
         console.error('Unexpected product categories response structure:', response);
         setCategories([]);
+        setFilteredCategories([]);
         setPagination({
           currentPage: 1,
-          perPage: 20,
+          perPage: 5,
           totalPages: 1,
           totalItems: 0,
         });
@@ -54,6 +59,22 @@ export function ProductCategories() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCategories(categories);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = categories.filter((category) => {
+      return (
+        category.categoryName?.toLowerCase().includes(query) ||
+        category.categoryId?.toLowerCase().includes(query)
+      );
+    });
+    setFilteredCategories(filtered);
+  }, [searchQuery, categories]);
 
   const handlePageChange = (page: number) => {
     fetchCategories(page);
@@ -126,7 +147,27 @@ export function ProductCategories() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {categories.length === 0 ? (
+          {categories.length > 0 && (
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search categories by name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Found {filteredCategories.length} result{filteredCategories.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {filteredCategories.length === 0 && categories.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">No product categories found</p>
@@ -137,9 +178,16 @@ export function ProductCategories() {
                 </Button>
               </Link>
             </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No categories match your search</p>
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            </div>
           ) : (
             <div className="space-y-4">
-              {categories.map((category) => (
+              {filteredCategories.map((category) => (
                 <div
                   key={category.categoryId}
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
@@ -180,32 +228,45 @@ export function ProductCategories() {
             </div>
           )}
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
+          {/* Pagination - show info always, controls when multiple pages */}
+          {!searchQuery && filteredCategories.length > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} total)
+                {pagination.totalPages > 1 ? (
+                  <>Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} total)</>
+                ) : (
+                  <>Showing all {pagination.totalItems} categor{pagination.totalItems !== 1 ? 'ies' : 'y'}</>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show info when searching */}
+          {searchQuery && filteredCategories.length > 0 && (
+            <div className="mt-6 pt-4 border-t text-center text-sm text-muted-foreground">
+              Showing {filteredCategories.length} of {categories.length} categories on this page
             </div>
           )}
         </CardContent>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { 
   ArrowLeft, 
   User, 
@@ -12,26 +13,34 @@ import {
   FileText, 
   ExternalLink,
   CheckCircle,
-  XCircle
+  XCircle,
+  Ban,
+  UserCheck,
+  AlertTriangle
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { VendorSignup } from '../types/api';
 
 export function VendorSignupDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id: vendorId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [signup, setSignup] = useState<VendorSignup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [suspending, setSuspending] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [suspensionReason, setSuspensionReason] = useState('');
+  const [requiredActions, setRequiredActions] = useState('');
 
   const fetchSignup = async () => {
-    if (!id) return;
+    if (!vendorId) return;
     
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getVendorSignup(id);
+      const response = await apiService.getVendorSignup(vendorId);
       console.log('Vendor Signup Detail Response:', response);
       
       if (response.data) {
@@ -49,21 +58,63 @@ export function VendorSignupDetail() {
 
   useEffect(() => {
     fetchSignup();
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorId]);
 
   const handleToggleStatus = async () => {
-    if (!signup || !id) return;
+    if (!signup || !vendorId) return;
     
     setToggling(true);
     try {
-      await apiService.toggleVendorStatus(id);
-      // Refresh the data to get updated status
+      await apiService.toggleVendorStatus(vendorId);
       await fetchSignup();
     } catch (error) {
       console.error('Failed to toggle vendor status:', error);
       setError('Failed to update vendor status. Please try again.');
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!signup || !vendorId) return;
+    
+    setApproving(true);
+    try {
+      await apiService.approveVendor(vendorId);
+      await fetchSignup();
+    } catch (error) {
+      console.error('Failed to approve vendor:', error);
+      setError('Failed to approve vendor. Please try again.');
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleSuspend = async () => {
+    if (!signup || !vendorId || !suspensionReason.trim()) return;
+    
+    setSuspending(true);
+    try {
+      const actionsArray = requiredActions
+        .split('\n')
+        .map(action => action.trim())
+        .filter(action => action.length > 0);
+
+      await apiService.suspendVendor(vendorId, {
+        suspensionReason: suspensionReason.trim(),
+        requiredActions: actionsArray.length > 0 ? actionsArray : ['Contact support for more information'],
+      });
+      
+      setShowSuspendModal(false);
+      setSuspensionReason('');
+      setRequiredActions('');
+      await fetchSignup();
+    } catch (error) {
+      console.error('Failed to suspend vendor:', error);
+      setError('Failed to suspend vendor. Please try again.');
+    } finally {
+      setSuspending(false);
     }
   };
 
@@ -140,24 +191,86 @@ export function VendorSignupDetail() {
           <h1 className="text-3xl font-bold">Vendor Signup Details</h1>
         </div>
         
-        <Button 
-          onClick={handleToggleStatus}
-          disabled={toggling}
-          variant={signup.isActive === '1' ? 'destructive' : 'default'}
-        >
-          {toggling ? 'Updating...' : statusInfo.actionLabel}
-        </Button>
+        <div className="flex items-center gap-2">
+          {signup.isApproved === '0' && signup.isSuspended === '0' && (
+            <Button 
+              onClick={handleApprove}
+              disabled={approving}
+              variant="default"
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              {approving ? 'Approving...' : 'Approve Vendor'}
+            </Button>
+          )}
+          
+          {signup.isSuspended === '0' && (
+            <Button 
+              onClick={() => setShowSuspendModal(true)}
+              disabled={suspending}
+              variant="destructive"
+            >
+              <Ban className="h-4 w-4 mr-2" />
+              Suspend Vendor
+            </Button>
+          )}
+          
+          <Button 
+            onClick={handleToggleStatus}
+            disabled={toggling}
+            variant={signup.isActive === '1' ? 'outline' : 'default'}
+          >
+            {toggling ? 'Updating...' : statusInfo.actionLabel}
+          </Button>
+        </div>
       </div>
 
-      {/* Status Card */}
-      <Card className={`border-2 ${statusInfo.className}`}>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2">
-            <StatusIcon className="h-5 w-5" />
-            <span className="font-medium">Status: {statusInfo.label}</span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className={`border-2 ${statusInfo.className}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <StatusIcon className="h-5 w-5" />
+              <span className="font-medium">Status: {statusInfo.label}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`border-2 ${signup.isApproved === '1' ? 'text-green-600 bg-green-50 border-green-200' : 'text-yellow-600 bg-yellow-50 border-yellow-200'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              {signup.isApproved === '1' ? (
+                <>
+                  <UserCheck className="h-5 w-5" />
+                  <span className="font-medium">Approved</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="font-medium">Pending Approval</span>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={`border-2 ${signup.isSuspended === '1' ? 'text-red-600 bg-red-50 border-red-200' : 'text-gray-600 bg-gray-50 border-gray-200'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              {signup.isSuspended === '1' ? (
+                <>
+                  <Ban className="h-5 w-5" />
+                  <span className="font-medium">Suspended</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">Not Suspended</span>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Information */}
@@ -307,7 +420,7 @@ export function VendorSignupDetail() {
             <CardTitle>Timeline</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Created At</label>
                 <p className="text-sm">{new Date(signup.createdAt).toLocaleString()}</p>
@@ -316,10 +429,91 @@ export function VendorSignupDetail() {
                 <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
                 <p className="text-sm">{new Date(signup.updatedAt).toLocaleString()}</p>
               </div>
+              {signup.approvedAt && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Approved At</label>
+                  <p className="text-sm">{new Date(signup.approvedAt).toLocaleString()}</p>
+                </div>
+              )}
+              {signup.suspendedAt && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Suspended At</label>
+                  <p className="text-sm">{new Date(signup.suspendedAt).toLocaleString()}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Suspend Modal */}
+      {showSuspendModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ban className="h-5 w-5 text-destructive" />
+                Suspend Vendor
+              </CardTitle>
+              <CardDescription>
+                Provide a reason for suspension and required actions for the vendor
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Suspension Reason <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={suspensionReason}
+                  onChange={(e) => setSuspensionReason(e.target.value)}
+                  placeholder="e.g., Multiple customer complaints about product quality"
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Required Actions (one per line)
+                </label>
+                <textarea
+                  value={requiredActions}
+                  onChange={(e) => setRequiredActions(e.target.value)}
+                  placeholder="Submit updated quality assurance documentation&#10;Provide written explanation of corrective measures"
+                  className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter each required action on a new line
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-4">
+                <Button
+                  onClick={handleSuspend}
+                  disabled={suspending || !suspensionReason.trim()}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  {suspending ? 'Suspending...' : 'Suspend Vendor'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowSuspendModal(false);
+                    setSuspensionReason('');
+                    setRequiredActions('');
+                  }}
+                  disabled={suspending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

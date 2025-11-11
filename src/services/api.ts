@@ -10,6 +10,7 @@ import type {
   CreateProductCategoryRequest,
   LoginCredentials,
   LoginResponse,
+  SuspendVendorRequest,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -255,17 +256,36 @@ class ApiService {
     );
   }
 
-  async getVendorSignup(id: string): Promise<ApiResponse<VendorSignup>> {
+  async getVendorSignup(vendorId: string): Promise<ApiResponse<VendorSignup>> {
     return this.request<ApiResponse<VendorSignup>>(
-      `/backoffice/vendors/signup/${id}`
+      `/backoffice/vendors/signup/${vendorId}`
     );
   }
 
-  async toggleVendorStatus(id: string): Promise<ApiResponse<{ message: string }>> {
+  async toggleVendorStatus(vendorId: string): Promise<ApiResponse<{ message: string }>> {
     return this.request<ApiResponse<{ message: string }>>(
-      `/backoffice/vendors/signup/status/${id}`,
+      `/backoffice/vendors/account/${vendorId}/status`,
       {
         method: "POST",
+      }
+    );
+  }
+
+  async approveVendor(vendorId: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/account/${vendorId}/approve`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  async suspendVendor(vendorId: string, data: SuspendVendorRequest): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/account/${vendorId}/suspend`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
       }
     );
   }
@@ -294,6 +314,16 @@ class ApiService {
       `/business/category`,
       {
         method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async updateBusinessCategory(id: string, data: CreateCategoryRequest): Promise<ApiResponse<BusinessCategory>> {
+    return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
+      `/business/category/edit/${id}`,
+      {
+        method: "PUT",
         body: JSON.stringify(data),
       }
     );

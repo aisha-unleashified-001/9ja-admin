@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Plus, Tag, Calendar } from 'lucide-react';
+import { Input } from '../components/ui/Input';
+import { Plus, Tag, Calendar, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { BusinessCategory } from '../types/api';
 
 export function BusinessCategories() {
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<BusinessCategory[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,9 +23,11 @@ export function BusinessCategories() {
       
       if (response.data && Array.isArray(response.data)) {
         setCategories(response.data);
+        setFilteredCategories(response.data);
       } else {
         console.error('Unexpected business categories response structure:', response);
         setCategories([]);
+        setFilteredCategories([]);
       }
     } catch (error) {
       console.error('Failed to fetch business categories:', error);
@@ -36,6 +41,22 @@ export function BusinessCategories() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredCategories(categories);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = categories.filter((category) => {
+      return (
+        category.categoryName?.toLowerCase().includes(query) ||
+        category.id?.toLowerCase().includes(query)
+      );
+    });
+    setFilteredCategories(filtered);
+  }, [searchQuery, categories]);
 
   if (loading) {
     return (
@@ -104,7 +125,27 @@ export function BusinessCategories() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {categories.length === 0 ? (
+          {categories.length > 0 && (
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search categories by name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Found {filteredCategories.length} result{filteredCategories.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {filteredCategories.length === 0 && categories.length === 0 ? (
             <div className="text-center py-8">
               <Tag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">No business categories found</p>
@@ -115,9 +156,16 @@ export function BusinessCategories() {
                 </Button>
               </Link>
             </div>
+          ) : filteredCategories.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No categories match your search</p>
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            </div>
           ) : (
             <div className="space-y-4">
-              {categories.map((category) => (
+              {filteredCategories.map((category) => (
                 <div
                   key={category.id}
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
@@ -163,8 +211,12 @@ export function BusinessCategories() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Categories</p>
-                <p className="text-2xl font-bold">{categories.length}</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Filtered Categories' : 'Total Categories'}
+                </p>
+                <p className="text-2xl font-bold">
+                  {searchQuery ? `${filteredCategories.length} / ${categories.length}` : categories.length}
+                </p>
               </div>
               <Tag className="h-8 w-8 text-muted-foreground" />
             </div>

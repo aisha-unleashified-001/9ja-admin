@@ -194,31 +194,37 @@ export function Contacts() {
           )}
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
+          {contacts.length > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Page {pagination.currentPage} of {pagination.totalPages}
+                {pagination.totalPages > 1 ? (
+                  <>Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} total)</>
+                ) : (
+                  <>Showing all {pagination.totalItems} contact{pagination.totalItems !== 1 ? 's' : ''}</>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
