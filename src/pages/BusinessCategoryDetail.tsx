@@ -1,11 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { ArrowLeft, Tag, Calendar, Clock, Edit2, Save, X } from 'lucide-react';
-import { apiService } from '../services/api';
-import type { BusinessCategory } from '../types/api';
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { ArrowLeft, Tag, Calendar, Clock, Edit2, Save, X } from "lucide-react";
+import { apiService } from "../services/api";
+import type { BusinessCategory } from "../types/api";
 
 export function BusinessCategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,26 +21,30 @@ export function BusinessCategoryDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState('');
+  const [editedName, setEditedName] = useState("");
   const [saving, setSaving] = useState(false);
 
   const fetchCategory = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     setError(null);
     try {
       const response = await apiService.getBusinessCategory(id);
-      console.log('Business Category Detail Response:', response);
-      
+      console.log("Business Category Detail Response:", response);
+
       if (response.data) {
         setCategory(response.data);
       } else {
-        setError('Business category not found');
+        setError("Business category not found");
       }
     } catch (error) {
-      console.error('Failed to fetch business category:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load business category');
+      console.error("Failed to fetch business category:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load business category"
+      );
     } finally {
       setLoading(false);
     }
@@ -44,7 +55,7 @@ export function BusinessCategoryDetail() {
   }, [id]);
 
   const handleBack = () => {
-    navigate('/dashboard/business-categories');
+    navigate("/dashboard/business-categories");
   };
 
   const handleEdit = () => {
@@ -56,7 +67,29 @@ export function BusinessCategoryDetail() {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditedName('');
+    setEditedName("");
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    // const confirmDelete = window.confirm(
+    //   "Are you sure you want to delete this category?"
+    // );
+    // if (!confirmDelete) return;
+
+    try {
+      const response = await apiService.deleteBusinessCategory(id);
+      navigate("/dashboard/business-categories");
+      toast.success(response.message);
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete category"
+      );
+      setError(
+        error instanceof Error ? error.message : "Failed to delete category"
+      );
+    }
   };
 
   const handleSave = async () => {
@@ -64,12 +97,16 @@ export function BusinessCategoryDetail() {
 
     setSaving(true);
     try {
-      await apiService.updateBusinessCategory(id, { categoryName: editedName.trim() });
+      await apiService.updateBusinessCategory(id, {
+        categoryName: editedName.trim(),
+      });
       setIsEditing(false);
       fetchCategory(); // Refresh the data
     } catch (error) {
-      console.error('Failed to update category:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update category');
+      console.error("Failed to update category:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to update category"
+      );
     } finally {
       setSaving(false);
     }
@@ -110,7 +147,9 @@ export function BusinessCategoryDetail() {
         </div>
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-destructive mb-4">{error || 'Business category not found'}</p>
+            <p className="text-destructive mb-4">
+              {error || "Business category not found"}
+            </p>
             <Button onClick={fetchCategory} variant="outline">
               Try Again
             </Button>
@@ -125,7 +164,7 @@ export function BusinessCategoryDetail() {
     return {
       date: date.toLocaleDateString(),
       time: date.toLocaleTimeString(),
-      full: date.toLocaleString()
+      full: date.toLocaleString(),
     };
   };
 
@@ -161,10 +200,21 @@ export function BusinessCategoryDetail() {
                   </div>
                 </div>
                 {!isEditing && (
-                  <Button variant="outline" size="sm" onClick={handleEdit}>
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={handleEdit}>
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDelete}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </>
                 )}
               </CardTitle>
             </CardHeader>
@@ -174,7 +224,9 @@ export function BusinessCategoryDetail() {
                 {isEditing ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Category Name</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Name
+                      </label>
                       <Input
                         type="text"
                         value={editedName}
@@ -184,11 +236,18 @@ export function BusinessCategoryDetail() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSave} disabled={saving || !editedName.trim()}>
+                      <Button
+                        onClick={handleSave}
+                        disabled={saving || !editedName.trim()}
+                      >
                         <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Changes'}
+                        {saving ? "Saving..." : "Save Changes"}
                       </Button>
-                      <Button variant="outline" onClick={handleCancelEdit} disabled={saving}>
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                      >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
@@ -197,12 +256,18 @@ export function BusinessCategoryDetail() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Category Name</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Name
+                      </label>
                       <p className="text-sm mt-1">{category.categoryName}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Category ID</label>
-                      <p className="text-sm mt-1 font-mono">{category.id}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Count
+                      </label>
+                      <p className="text-sm mt-1 font-mono">
+                        {category.associatedBusinesses}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -212,8 +277,9 @@ export function BusinessCategoryDetail() {
                 <h3 className="font-medium mb-3">Usage Information</h3>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    This category is available for vendors to select during registration. 
-                    Vendors can choose this category to classify their business type.
+                    This category is available for vendors to select during
+                    registration. Vendors can choose this category to classify
+                    their business type.
                   </p>
                 </div>
               </div>
@@ -241,7 +307,7 @@ export function BusinessCategoryDetail() {
                   {createdDate.full}
                 </p>
               </div>
-              
+
               {isUpdated && (
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -264,14 +330,20 @@ export function BusinessCategoryDetail() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <span className="text-sm font-medium text-green-600">Active</span>
+                <span className="text-sm font-medium text-green-600">
+                  Active
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Category Type</span>
+                <span className="text-sm text-muted-foreground">
+                  Category Type
+                </span>
                 <span className="text-sm font-medium">Business</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Available for</span>
+                <span className="text-sm text-muted-foreground">
+                  Available for
+                </span>
                 <span className="text-sm font-medium">Vendor Registration</span>
               </div>
             </CardContent>
@@ -281,19 +353,35 @@ export function BusinessCategoryDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Actions</CardTitle>
-              <CardDescription>
-                Manage this business category
-              </CardDescription>
+              <CardDescription>Manage this business category</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {!isEditing && (
-                  <Button variant="outline" className="w-full" onClick={handleEdit}>
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Edit Category
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleEdit}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit Category
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleDelete}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Delete Category
+                    </Button>
+                  </>
                 )}
-                <Button variant="outline" className="w-full" onClick={handleBack}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleBack}
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Categories
                 </Button>

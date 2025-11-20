@@ -79,11 +79,11 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    const basicAuthCredentials = btoa('admin@example.com:admin123');
+    const basicAuthCredentials = btoa("admin@example.com:admin123");
 
     const headers = {
       "Content-Type": "application/json",
-      "Authorization": `Basic ${basicAuthCredentials}`,
+      Authorization: `Basic ${basicAuthCredentials}`,
       ...options.headers,
     };
 
@@ -124,13 +124,13 @@ class ApiService {
   // Auth
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const url = `${API_BASE_URL}/backoffice/login`;
-    
+
     // Create Basic Auth header for login endpoint
-    const basicAuthCredentials = btoa('admin@example.com:admin123');
-    
+    const basicAuthCredentials = btoa("admin@example.com:admin123");
+
     const headers = {
       "Content-Type": "application/json",
-      "Authorization": `Basic ${basicAuthCredentials}`,
+      Authorization: `Basic ${basicAuthCredentials}`,
     };
 
     try {
@@ -262,7 +262,9 @@ class ApiService {
     );
   }
 
-  async toggleVendorStatus(vendorId: string): Promise<ApiResponse<{ message: string }>> {
+  async toggleVendorStatus(
+    vendorId: string
+  ): Promise<ApiResponse<{ message: string }>> {
     return this.request<ApiResponse<{ message: string }>>(
       `/backoffice/vendors/account/${vendorId}/status`,
       {
@@ -271,7 +273,9 @@ class ApiService {
     );
   }
 
-  async approveVendor(vendorId: string): Promise<ApiResponse<{ message: string }>> {
+  async approveVendor(
+    vendorId: string
+  ): Promise<ApiResponse<{ message: string }>> {
     return this.request<ApiResponse<{ message: string }>>(
       `/backoffice/vendors/account/${vendorId}/approve`,
       {
@@ -280,7 +284,10 @@ class ApiService {
     );
   }
 
-  async suspendVendor(vendorId: string, data: SuspendVendorRequest): Promise<ApiResponse<{ message: string }>> {
+  async suspendVendor(
+    vendorId: string,
+    data: SuspendVendorRequest
+  ): Promise<ApiResponse<{ message: string }>> {
     return this.request<ApiResponse<{ message: string }>>(
       `/backoffice/vendors/account/${vendorId}/suspend`,
       {
@@ -303,13 +310,17 @@ class ApiService {
     );
   }
 
-  async getBusinessCategory(id: string): Promise<ApiResponse<BusinessCategory>> {
+  async getBusinessCategory(
+    id: string
+  ): Promise<ApiResponse<BusinessCategory>> {
     return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
       `/business/category/${id}`
     );
   }
 
-  async createBusinessCategory(data: CreateCategoryRequest): Promise<ApiResponse<BusinessCategory>> {
+  async createBusinessCategory(
+    data: CreateCategoryRequest
+  ): Promise<ApiResponse<BusinessCategory>> {
     return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
       `/business/category`,
       {
@@ -319,12 +330,36 @@ class ApiService {
     );
   }
 
-  async updateBusinessCategory(id: string, data: CreateCategoryRequest): Promise<ApiResponse<BusinessCategory>> {
+  async updateBusinessCategory(
+    id: string,
+    data: CreateCategoryRequest
+  ): Promise<ApiResponse<BusinessCategory>> {
     return this.requestWithBasicAuth<ApiResponse<BusinessCategory>>(
       `/business/category/edit/${id}`,
       {
         method: "PUT",
         body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async deleteBusinessCategory(
+    id: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.requestWithBasicAuth<ApiResponse<{ message: string }>>(
+      `/business/category/delete/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+  async deleteProductCategory(
+    id: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.requestWithBasicAuth<ApiResponse<{ message: string }>>(
+      `/product/category/delete/${id}`,
+      {
+        method: "DELETE",
       }
     );
   }
@@ -339,7 +374,9 @@ class ApiService {
     );
   }
 
-  async createProductCategory(data: CreateProductCategoryRequest): Promise<ApiResponse<ProductCategory>> {
+  async createProductCategory(
+    data: CreateProductCategoryRequest
+  ): Promise<ApiResponse<ProductCategory>> {
     return this.requestWithBasicAuth<ApiResponse<ProductCategory>>(
       `/product/category/create`,
       {
@@ -349,7 +386,9 @@ class ApiService {
     );
   }
 
-  async getAllProductCategories(): Promise<PaginatedApiResponse<ProductCategory>> {
+  async getAllProductCategories(): Promise<
+    PaginatedApiResponse<ProductCategory>
+  > {
     return this.requestWithBasicAuth<PaginatedApiResponse<ProductCategory>>(
       `/product/category?page=1&perPage=10000`
     );

@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { ArrowLeft, Package, Calendar, Clock } from 'lucide-react';
-import { apiService } from '../services/api';
-import type { ProductCategory } from '../types/api';
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { ArrowLeft, Package, Calendar, Clock } from "lucide-react";
+import { apiService } from "../services/api";
+import type { ProductCategory } from "../types/api";
+import toast from "react-hot-toast";
 
 export function ProductCategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,27 +22,33 @@ export function ProductCategoryDetail() {
 
   const fetchCategory = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     setError(null);
     try {
       // Since we don't have a single product category endpoint, we'll fetch all and find the one we need
       const response = await apiService.getAllProductCategories();
-      console.log('Product Categories Response:', response);
-      
+      console.log("Product Categories Response:", response);
+
       if (response.data && Array.isArray(response.data)) {
-        const foundCategory = response.data.find(cat => cat.categoryId === id);
+        const foundCategory = response.data.find(
+          (cat) => cat.categoryId === id
+        );
         if (foundCategory) {
           setCategory(foundCategory);
         } else {
-          setError('Product category not found');
+          setError("Product category not found");
         }
       } else {
-        setError('Failed to load product category');
+        setError("Failed to load product category");
       }
     } catch (error) {
-      console.error('Failed to fetch product category:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load product category');
+      console.error("Failed to fetch product category:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load product category"
+      );
     } finally {
       setLoading(false);
     }
@@ -46,7 +59,7 @@ export function ProductCategoryDetail() {
   }, [id]);
 
   const handleBack = () => {
-    navigate('/dashboard/product-categories');
+    navigate("/dashboard/product-categories");
   };
 
   if (loading) {
@@ -84,7 +97,9 @@ export function ProductCategoryDetail() {
         </div>
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-destructive mb-4">{error || 'Product category not found'}</p>
+            <p className="text-destructive mb-4">
+              {error || "Product category not found"}
+            </p>
             <Button onClick={fetchCategory} variant="outline">
               Try Again
             </Button>
@@ -99,7 +114,7 @@ export function ProductCategoryDetail() {
     return {
       date: date.toLocaleDateString(),
       time: date.toLocaleTimeString(),
-      full: date.toLocaleString()
+      full: date.toLocaleString(),
     };
   };
 
@@ -139,12 +154,18 @@ export function ProductCategoryDetail() {
                 <h3 className="font-medium mb-3">Category Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Category Name</label>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Category Name
+                    </label>
                     <p className="text-sm mt-1">{category.categoryName}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Category ID</label>
-                    <p className="text-sm mt-1 font-mono">{category.categoryId}</p>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Category Count
+                    </label>
+                    <p className="text-sm mt-1 font-mono">
+                      {category.associatedProducts}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -153,9 +174,10 @@ export function ProductCategoryDetail() {
                 <h3 className="font-medium mb-3">Usage Information</h3>
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    This product category is available for vendors to classify their products. 
-                    It helps organize the marketplace and makes it easier for customers to find 
-                    specific types of products through browsing and filtering.
+                    This product category is available for vendors to classify
+                    their products. It helps organize the marketplace and makes
+                    it easier for customers to find specific types of products
+                    through browsing and filtering.
                   </p>
                 </div>
               </div>
@@ -164,13 +186,17 @@ export function ProductCategoryDetail() {
                 <h3 className="font-medium mb-3">Category Features</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <h4 className="text-sm font-medium text-green-800">For Vendors</h4>
+                    <h4 className="text-sm font-medium text-green-800">
+                      For Vendors
+                    </h4>
                     <p className="text-xs text-green-700 mt-1">
                       Organize product inventory and improve discoverability
                     </p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="text-sm font-medium text-blue-800">For Customers</h4>
+                    <h4 className="text-sm font-medium text-blue-800">
+                      For Customers
+                    </h4>
                     <p className="text-xs text-blue-700 mt-1">
                       Browse and filter products by category
                     </p>
@@ -201,7 +227,7 @@ export function ProductCategoryDetail() {
                   {createdDate.full}
                 </p>
               </div>
-              
+
               {isUpdated && (
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -224,15 +250,23 @@ export function ProductCategoryDetail() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <span className="text-sm font-medium text-green-600">Active</span>
+                <span className="text-sm font-medium text-green-600">
+                  Active
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Category Type</span>
+                <span className="text-sm text-muted-foreground">
+                  Category Type
+                </span>
                 <span className="text-sm font-medium">Product</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Available for</span>
-                <span className="text-sm font-medium">Product Classification</span>
+                <span className="text-sm text-muted-foreground">
+                  Available for
+                </span>
+                <span className="text-sm font-medium">
+                  Product Classification
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -241,13 +275,43 @@ export function ProductCategoryDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Actions</CardTitle>
-              <CardDescription>
-                Manage this product category
-              </CardDescription>
+              <CardDescription>Manage this product category</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full" onClick={handleBack}>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={async () => {
+                    // const confirmed = window.confirm(
+                    //   "Are you sure you want to delete this category? This cannot be undone."
+                    // );
+                    // if (!confirmed) return;
+
+                    try {
+                      const response = await apiService.deleteProductCategory(
+                        category.categoryId
+                      );
+                      navigate("/dashboard/product-categories");
+                      toast.success(response.message);
+                    } catch (err) {
+                      console.error(err);
+                      // alert("Failed to delete category");
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to delete category"
+                      );
+                    }
+                  }}
+                >
+                  Delete Category
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleBack}
+                >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Categories
                 </Button>

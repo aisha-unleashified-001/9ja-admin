@@ -99,6 +99,7 @@ export interface VendorSignup {
 export interface BusinessCategory {
   id: string;
   categoryName: string;
+  associatedBusinesses: string | number;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +111,7 @@ export interface CreateCategoryRequest {
 export interface ProductCategory {
   categoryId: string;
   categoryName: string;
+  associatedProducts: string | number;
   createdAt: string;
   updatedAt: string;
 }
