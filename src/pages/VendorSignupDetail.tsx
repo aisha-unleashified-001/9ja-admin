@@ -16,7 +16,8 @@ import {
   XCircle,
   Ban,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { VendorSignup } from '../types/api';
@@ -30,9 +31,13 @@ export function VendorSignupDetail() {
   const [toggling, setToggling] = useState(false);
   const [approving, setApproving] = useState(false);
   const [suspending, setSuspending] = useState(false);
+  const [unsuspending, setUnsuspending] = useState(false);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [showUnsuspendModal, setShowUnsuspendModal] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState('');
   const [requiredActions, setRequiredActions] = useState('');
+  const [reinstatementReason, setReinstatementReason] = useState('');
+  const [reinstatementNotes, setReinstatementNotes] = useState('');
 
   const fetchSignup = async () => {
     if (!vendorId) return;
@@ -115,6 +120,28 @@ export function VendorSignupDetail() {
       setError('Failed to suspend vendor. Please try again.');
     } finally {
       setSuspending(false);
+    }
+  };
+
+  const handleUnsuspend = async () => {
+    if (!signup || !vendorId || !reinstatementReason.trim()) return;
+    
+    setUnsuspending(true);
+    try {
+      await apiService.reinstateVendor(vendorId, {
+        reinstatementReason: reinstatementReason.trim(),
+        notes: reinstatementNotes.trim() || undefined,
+      });
+      
+      setShowUnsuspendModal(false);
+      setReinstatementReason('');
+      setReinstatementNotes('');
+      await fetchSignup();
+    } catch (error) {
+      console.error('Failed to unsuspend vendor:', error);
+      setError('Failed to unsuspend vendor. Please try again.');
+    } finally {
+      setUnsuspending(false);
     }
   };
 
@@ -211,6 +238,17 @@ export function VendorSignupDetail() {
             >
               <Ban className="h-4 w-4 mr-2" />
               Suspend Vendor
+            </Button>
+          )}
+          
+          {signup.isSuspended === '1' && (
+            <Button 
+              onClick={() => setShowUnsuspendModal(true)}
+              disabled={unsuspending}
+              variant="default"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Unsuspend
             </Button>
           )}
           
@@ -504,6 +542,72 @@ export function VendorSignupDetail() {
                     setRequiredActions('');
                   }}
                   disabled={suspending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Unsuspend Modal */}
+      {showUnsuspendModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-green-600" />
+                Unsuspend Vendor
+              </CardTitle>
+              <CardDescription>
+                Provide a reason for reinstating the vendor account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Reinstatement Reason <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={reinstatementReason}
+                  onChange={(e) => setReinstatementReason(e.target.value)}
+                  placeholder="e.g., Quality assurance documentation satisfied"
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={reinstatementNotes}
+                  onChange={(e) => setReinstatementNotes(e.target.value)}
+                  placeholder="Additional notes about the reinstatement"
+                  className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-4">
+                <Button
+                  onClick={handleUnsuspend}
+                  disabled={unsuspending || !reinstatementReason.trim()}
+                  variant="default"
+                  className="flex-1"
+                >
+                  {unsuspending ? 'Unsuspending...' : 'Unsuspend Vendor'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowUnsuspendModal(false);
+                    setReinstatementReason('');
+                    setReinstatementNotes('');
+                  }}
+                  disabled={unsuspending}
                   variant="outline"
                   className="flex-1"
                 >
