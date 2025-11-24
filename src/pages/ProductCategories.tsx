@@ -13,7 +13,7 @@ export function ProductCategories() {
   const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    perPage: 5,
+    perPage: 10,
     totalPages: 1,
     totalItems: 0,
   });
@@ -24,7 +24,7 @@ export function ProductCategories() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getProductCategories(page, 5);
+      const response = await apiService.getProductCategories(page, 10);
       console.log('Product Categories API Response:', response);
       
       if (response.data && Array.isArray(response.data)) {
@@ -32,7 +32,7 @@ export function ProductCategories() {
         setFilteredCategories(response.data);
         setPagination(response.pagination || {
           currentPage: 1,
-          perPage: 5,
+          perPage: 10,
           totalPages: 1,
           totalItems: response.data.length,
         });
@@ -42,7 +42,7 @@ export function ProductCategories() {
         setFilteredCategories([]);
         setPagination({
           currentPage: 1,
-          perPage: 5,
+          perPage: 10,
           totalPages: 1,
           totalItems: 0,
         });
@@ -186,7 +186,7 @@ export function ProductCategories() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto h-[60dvh]">
               {filteredCategories.map((category) => (
                 <div
                   key={category.categoryId}
@@ -200,19 +200,19 @@ export function ProductCategories() {
                       <h3 className="font-medium text-lg">{category.categoryName}</h3>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Created: {new Date(category.createdAt).toLocaleDateString()}
+                          {/* <Calendar className="h-3 w-3" /> */}
+                          <span>Category count:</span> {category.associatedProducts || 0}
                         </div>
-                        {category.updatedAt !== category.createdAt && (
+                        {/* {category.updatedAt !== category.createdAt && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Updated: {new Date(category.updatedAt).toLocaleDateString()}
                           </div>
-                        )}
+                        )} */}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      {/* <p className="text-xs text-muted-foreground mt-1">
                         ID: {category.categoryId}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                   
