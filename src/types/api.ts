@@ -125,6 +125,11 @@ export interface SuspendVendorRequest {
   requiredActions: string[];
 }
 
+export interface ReinstateVendorRequest {
+  reinstatementReason: string;
+  notes?: string;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

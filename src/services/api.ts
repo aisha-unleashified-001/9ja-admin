@@ -11,6 +11,7 @@ import type {
   LoginCredentials,
   LoginResponse,
   SuspendVendorRequest,
+  ReinstateVendorRequest,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -292,6 +293,19 @@ class ApiService {
       `/backoffice/vendors/account/${vendorId}/suspend`,
       {
         method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async reinstateVendor(
+    vendorId: string,
+    data: ReinstateVendorRequest
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/account/${vendorId}/reinstate`,
+      {
+        method: "PUT",
         body: JSON.stringify(data),
       }
     );
