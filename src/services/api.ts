@@ -373,10 +373,10 @@ class ApiService {
     data: CreateCategoryRequest
   ): Promise<ApiResponse<ProductCategory>> {
     return this.requestWithBasicAuth<ApiResponse<ProductCategory>>(
-      `/product/edit/${id}`,
+      `/product/category/edit/${id}`,
       {
         method: "PUT",
-        body: JSON.stringify({ productName: data.categoryName }),
+        body: JSON.stringify(data),
       }
     );
   }
