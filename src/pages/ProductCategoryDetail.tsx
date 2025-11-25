@@ -8,10 +8,19 @@ import {
   CardTitle,
 } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { ArrowLeft, Package, Calendar, Clock } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  Calendar,
+  Clock,
+  Save,
+  X,
+  Edit2,
+} from "lucide-react";
 import { apiService } from "../services/api";
 import type { ProductCategory } from "../types/api";
 import toast from "react-hot-toast";
+import { Input } from "@/components/ui/Input";
 
 export function ProductCategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +28,11 @@ export function ProductCategoryDetail() {
   const [category, setCategory] = useState<ProductCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // const [showEditDrawer, setShowEditDrawer] = useState(false);
 
   const fetchCategory = async () => {
     if (!id) return;
@@ -57,6 +71,60 @@ export function ProductCategoryDetail() {
   useEffect(() => {
     fetchCategory();
   }, [id]);
+
+  const handleEdit = () => {
+    if (category) {
+      setEditedName(category.categoryName);
+      setIsEditing(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedName("");
+  };
+
+  const handleSave = async () => {
+    if (!editedName.trim() || !id) return;
+
+    setSaving(true);
+    try {
+      await apiService.updateProductCategory(id, {
+        categoryName: editedName.trim(),
+      });
+
+      toast.success("Category updated successfully!");
+      setIsEditing(false);
+      fetchCategory(); // refresh page just like the business category
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update category"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!category?.categoryId) return;
+
+    try {
+      const response = await apiService.deleteProductCategory(
+        category.categoryId
+      );
+
+      toast.success(response.message);
+
+      // Redirect back to list, same as business category
+      // navigate("/dashboard/product-categories");
+    } catch (error) {
+      console.error("Failed to delete product category:", error);
+
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete category"
+      );
+    }
+  };
 
   const handleBack = () => {
     navigate("/dashboard/product-categories");
@@ -150,7 +218,7 @@ export function ProductCategoryDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
+              {/* <div>
                 <h3 className="font-medium mb-3">Category Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -168,6 +236,74 @@ export function ProductCategoryDetail() {
                     </p>
                   </div>
                 </div>
+              </div> */}
+              <div>
+                <h3 className="font-medium mb-3">Category Information</h3>
+
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Name
+                      </label>
+                      <Input
+                        type="text"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        placeholder="Enter category name"
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Description
+                      </label>
+                      <Input
+                        type="text"
+                        value={editedDescription}
+                        onChange={(e) => setEditedDescription(e.target.value)}
+                        placeholder="Enter category description"
+                        className="mt-1"
+                      />
+                    </div> */}
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSave}
+                        disabled={saving || !editedName.trim()}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? "Saving..." : "Save Changes"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Name
+                      </label>
+                      <p className="text-sm mt-1">{category.categoryName}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Category Count
+                      </label>
+                      <p className="text-sm mt-1">
+                        {category.associatedProducts || "—"}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -279,6 +415,47 @@ export function ProductCategoryDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
+                {!isEditing && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleEdit}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit Category
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleDelete}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Delete Category
+                    </Button>
+                  </>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleBack}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Categories
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+              <CardDescription>Manage this product category</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
                 <Button
                   variant="destructive"
                   className="w-full"
@@ -317,7 +494,7 @@ export function ProductCategoryDetail() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>

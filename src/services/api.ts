@@ -367,6 +367,20 @@ class ApiService {
       }
     );
   }
+
+  async updateProductCategory(
+    id: string,
+    data: CreateCategoryRequest
+  ): Promise<ApiResponse<ProductCategory>> {
+    return this.requestWithBasicAuth<ApiResponse<ProductCategory>>(
+      `/product/edit/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ productName: data.categoryName }),
+      }
+    );
+  }
+
   async deleteProductCategory(
     id: string
   ): Promise<ApiResponse<{ message: string }>> {
