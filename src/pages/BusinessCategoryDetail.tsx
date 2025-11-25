@@ -200,7 +200,7 @@ export function BusinessCategoryDetail() {
                   </div>
                 </div>
                 {!isEditing && (
-                  <>
+                  <div className="flex flex-col md:flex-row items-center gap-1 ml-2 md:gap-3">
                     <Button variant="outline" size="sm" onClick={handleEdit}>
                       <Edit2 className="h-4 w-4 mr-2" />
                       Edit
@@ -214,7 +214,7 @@ export function BusinessCategoryDetail() {
                       <X className="h-4 w-4 mr-2" />
                       Delete
                     </Button>
-                  </>
+                  </div>
                 )}
               </CardTitle>
             </CardHeader>
