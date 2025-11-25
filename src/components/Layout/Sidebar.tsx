@@ -21,7 +21,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Vendor Signups', href: '/dashboard/vendor-signups', icon: UserPlus },
+  { name: 'Vendors', href: '/dashboard/vendor-signups', icon: UserPlus },
   { name: 'Business Categories', href: '/dashboard/business-categories', icon: Tag },
   { name: 'Product Categories', href: '/dashboard/product-categories', icon: Package },
   { name: 'Waitlist', href: '/dashboard/waitlist', icon: Users },
