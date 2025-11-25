@@ -9,7 +9,7 @@ import {
 } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Plus, Tag, Calendar, Search } from "lucide-react";
+import { Plus, Tag, Search } from "lucide-react";
 import { apiService } from "../services/api";
 import type { BusinessCategory } from "../types/api";
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Plus, Package, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Plus, Package, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { ProductCategory } from '../types/api';
 
