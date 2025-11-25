@@ -368,10 +368,10 @@ export function VendorSignupDetail() {
                 <p className="text-sm">{signup.storeName}</p>
               </div>
             )}
-            {signup.businessCategory && (
+            {(signup.businessCategoryName || signup.businessCategory) && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Business Category</label>
-                <p className="text-sm">{signup.businessCategory}</p>
+                <p className="text-sm">{signup.businessCategoryName || signup.businessCategory}</p>
               </div>
             )}
             {signup.businessRegNumber && (

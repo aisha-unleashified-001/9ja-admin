@@ -3,58 +3,54 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Eye, ChevronLeft, ChevronRight, Download, Building, User, Phone, Mail, Search } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, Download, Building, User, Phone, Mail, Search, Filter } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { VendorSignup } from '../types/api';
 import { vendorSignupsToCSV, downloadCSV } from '../utils/csvExport';
+
+type StatusFilterKey = 'active' | 'approved' | 'pending' | 'suspended';
+type StatusFilters = Record<StatusFilterKey, boolean>;
 
 export function VendorSignups() {
   const [signups, setSignups] = useState<VendorSignup[]>([]);
   const [filteredSignups, setFilteredSignups] = useState<VendorSignup[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    perPage: 5,
-    totalPages: 1,
-    totalItems: 0,
+  const [statusFilters, setStatusFilters] = useState<StatusFilters>({
+    active: false,
+    approved: false,
+    pending: false,
+    suspended: false,
   });
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 5;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const fetchSignups = async (page = 1) => {
+  const fetchSignups = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiService.getVendorSignups(page, 5);
+      const response = await apiService.getAllVendorSignups();
       console.log('Vendor Signups API Response:', response);
-      
+
       if (response.data && Array.isArray(response.data)) {
         setSignups(response.data);
         setFilteredSignups(response.data);
-        // Handle pagination - API might return null for pagination
-        setPagination(response.pagination || {
-          currentPage: page,
-          perPage: 5,
-          totalPages: Math.ceil(response.data.length / 5) || 1,
-          totalItems: response.data.length,
-        });
+        setCurrentPage(1);
       } else {
         console.error('Unexpected vendor signups response structure:', response);
         setSignups([]);
         setFilteredSignups([]);
-        setPagination({
-          currentPage: 1,
-          perPage: 5,
-          totalPages: 1,
-          totalItems: 0,
-        });
+        setCurrentPage(1);
       }
     } catch (error) {
       console.error('Failed to fetch vendor signups:', error);
       setError(error instanceof Error ? error.message : 'Failed to load vendor signups');
       setSignups([]);
       setFilteredSignups([]);
+      setCurrentPage(1);
     } finally {
       setLoading(false);
     }
@@ -65,13 +61,14 @@ export function VendorSignups() {
   }, []);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredSignups(signups);
-      return;
-    }
+    const query = searchQuery.trim().toLowerCase();
+    const hasStatusFilters = Object.values(statusFilters).some(Boolean);
 
-    const query = searchQuery.toLowerCase();
-    const filtered = signups.filter((signup) => {
+    let filtered = signups.filter((signup) => {
+      if (!query) {
+        return true;
+      }
+
       return (
         signup.fullName?.toLowerCase().includes(query) ||
         signup.emailAddress?.toLowerCase().includes(query) ||
@@ -81,11 +78,42 @@ export function VendorSignups() {
         signup.vendorId?.toLowerCase().includes(query)
       );
     });
+
+    if (hasStatusFilters) {
+      filtered = filtered.filter((signup) => {
+        const matchesActive = statusFilters.active && signup.isActive === '1';
+        const matchesApproved = statusFilters.approved && signup.isApproved === '1';
+        const matchesPending = statusFilters.pending && signup.isApproved !== '1';
+        const matchesSuspended = statusFilters.suspended && signup.isSuspended === '1';
+
+        return matchesActive || matchesApproved || matchesPending || matchesSuspended;
+      });
+    }
+
     setFilteredSignups(filtered);
-  }, [searchQuery, signups]);
+    setCurrentPage(1);
+  }, [searchQuery, signups, statusFilters]);
+
+  const toggleStatusFilter = (key: StatusFilterKey) => {
+    setStatusFilters((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const clearStatusFilters = () => {
+    setStatusFilters({
+      active: false,
+      approved: false,
+      pending: false,
+      suspended: false,
+    });
+  };
+
+  const activeFilterCount = Object.values(statusFilters).filter(Boolean).length;
 
   const handlePageChange = (page: number) => {
-    fetchSignups(page);
+    setCurrentPage(page);
   };
 
   const handleExportCSV = async () => {
@@ -137,10 +165,17 @@ export function VendorSignups() {
     ) : null;
   };
 
+  const totalItems = filteredSignups.length;
+  const totalPages = Math.ceil(totalItems / perPage) || 1;
+  const paginatedSignups = filteredSignups.slice(
+    (currentPage - 1) * perPage,
+    currentPage * perPage
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Vendor Signups</h1>
+        <h1 className="text-3xl font-bold">Vendors</h1>
         <Card className="animate-pulse">
           <CardContent className="p-6">
             <div className="space-y-4">
@@ -157,7 +192,7 @@ export function VendorSignups() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Vendor Signups</h1>
+        <h1 className="text-3xl font-bold">Vendors</h1>
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-destructive mb-4">{error}</p>
@@ -173,10 +208,10 @@ export function VendorSignups() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Vendor Signups</h1>
+        <h1 className="text-3xl font-bold">Vendors</h1>
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            {pagination.totalItems} vendor applications
+            {signups.length} vendor applications
           </div>
           <Button 
             onClick={handleExportCSV} 
@@ -197,8 +232,8 @@ export function VendorSignups() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <div className="relative">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -208,14 +243,78 @@ export function VendorSignups() {
                 className="pl-10"
               />
             </div>
-            {searchQuery && (
-              <p className="text-sm text-muted-foreground mt-2">
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => setShowFilterPanel((prev) => !prev)}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              {showFilterPanel && (
+                <div className="absolute right-0 z-10 mt-2 w-64 rounded-lg border bg-background p-4 shadow-lg">
+                  <div className="mb-3 text-sm font-medium">Filter by status</div>
+                  <div className="space-y-3 text-sm">
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.active}
+                        onChange={() => toggleStatusFilter('active')}
+                      />
+                      Active
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.approved}
+                        onChange={() => toggleStatusFilter('approved')}
+                      />
+                      Approved
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.pending}
+                        onChange={() => toggleStatusFilter('pending')}
+                      />
+                      Pending Approval
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.suspended}
+                        onChange={() => toggleStatusFilter('suspended')}
+                      />
+                      Suspended
+                    </label>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <Button variant="ghost" size="sm" onClick={clearStatusFilters} disabled={activeFilterCount === 0}>
+                      Clear
+                    </Button>
+                    <Button size="sm" onClick={() => setShowFilterPanel(false)}>
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {(searchQuery || activeFilterCount > 0) && (
+              <p className="text-sm text-muted-foreground md:text-right">
                 Found {filteredSignups.length} result{filteredSignups.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
 
-          {filteredSignups.length === 0 ? (
+          {totalItems === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">
                 {searchQuery ? 'No vendors match your search' : 'No vendor signups found'}
@@ -232,7 +331,7 @@ export function VendorSignups() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredSignups.map((signup) => (
+              {paginatedSignups.map((signup) => (
                 <div
                   key={signup.vendorId}
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
@@ -302,44 +401,37 @@ export function VendorSignups() {
           )}
 
           {/* Pagination - show info always, controls when multiple pages */}
-          {!searchQuery && filteredSignups.length > 0 && (
+          {totalItems > perPage && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                {pagination.totalPages > 1 ? (
-                  <>Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} total vendors)</>
-                ) : (
-                  <>Showing all {pagination.totalItems} vendor{pagination.totalItems !== 1 ? 's' : ''}</>
-                )}
+                Page {currentPage} of {totalPages} ({totalItems} total vendor{totalItems !== 1 ? 's' : ''})
               </div>
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage === pagination.totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
           
-          {/* Show info when searching */}
-          {searchQuery && filteredSignups.length > 0 && (
+          {totalItems <= perPage && totalItems > 0 && (
             <div className="mt-6 pt-4 border-t text-center text-sm text-muted-foreground">
-              Showing {filteredSignups.length} of {signups.length} vendors on this page
+              Showing all {totalItems} vendor{totalItems !== 1 ? 's' : ''}
             </div>
           )}
         </CardContent>
