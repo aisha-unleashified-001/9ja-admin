@@ -292,7 +292,6 @@ export function ProductCategoryDetail() {
                       const response = await apiService.deleteProductCategory(
                         category.categoryId
                       );
-                      navigate("/dashboard/product-categories");
                       toast.success(response.message);
                     } catch (err) {
                       console.error(err);
