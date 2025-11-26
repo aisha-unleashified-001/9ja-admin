@@ -79,10 +79,6 @@ export function BusinessCategoryDetail() {
 
     try {
       const response = await apiService.deleteBusinessCategory(id);
-<<<<<<< HEAD
-=======
-      // navigate("/dashboard/business-categories");
->>>>>>> 268107aa78616ef221e020b24ee216bd551078e5
       toast.success(response.message);
     } catch (error) {
       console.error("Failed to delete category:", error);
