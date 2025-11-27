@@ -71,22 +71,56 @@ export function BusinessCategoryDetail() {
   };
 
   const handleDelete = async () => {
-    if (!id) return;
-    // const confirmDelete = window.confirm(
-    //   "Are you sure you want to delete this category?"
-    // );
-    // if (!confirmDelete) return;
+    if (!id || !category) return;
+
+    const associatedCount = Number(category.associatedBusinesses) || 0;
+    if (associatedCount > 0) {
+      toast.error("Unable to delete category with associated vendor signups.", {
+        style: {
+          background: "#fee2e2",
+          color: "#991b1b",
+        },
+        iconTheme: {
+          primary: "#dc2626",
+          secondary: "#fee2e2",
+        },
+      });
+      return;
+    }
 
     try {
       const response = await apiService.deleteBusinessCategory(id);
+
+      if (response.error) {
+        toast.error(response.message || "Unable to delete category.", {
+          style: {
+            background: "#fee2e2",
+            color: "#991b1b",
+          },
+          iconTheme: {
+            primary: "#dc2626",
+            secondary: "#fee2e2",
+          },
+        });
+        return;
+      }
+
       toast.success(response.message);
+      navigate("/dashboard/business-categories");
     } catch (error) {
       console.error("Failed to delete category:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete category"
-      );
-      setError(
-        error instanceof Error ? error.message : "Failed to delete category"
+        error instanceof Error ? error.message : "Failed to delete category",
+        {
+          style: {
+            background: "#fee2e2",
+            color: "#991b1b",
+          },
+          iconTheme: {
+            primary: "#dc2626",
+            secondary: "#fee2e2",
+          },
+        }
       );
     }
   };
