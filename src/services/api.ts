@@ -12,6 +12,10 @@ import type {
   LoginResponse,
   SuspendVendorRequest,
   ReinstateVendorRequest,
+  OrdersQuery,
+  OrdersResponse,
+  OrderItem,
+  OrdersMetrics,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -314,6 +318,36 @@ class ApiService {
   async getAllVendorSignups(): Promise<PaginatedApiResponse<VendorSignup>> {
     return this.request<PaginatedApiResponse<VendorSignup>>(
       `/backoffice/vendors/signup?page=1&perPage=10000`
+    );
+  }
+
+  // Orders
+  async getOrders(query: OrdersQuery): Promise<OrdersResponse> {
+    // Build the query string from the query object, filtering out undefined values
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+    const queryString = params.toString();
+
+    return this.request<OrdersResponse>(
+      `/backoffice/orders${queryString ? `?${queryString}` : ""}`
+    );
+  }
+
+  async getOrdersSummary(): Promise<ApiResponse<OrdersMetrics>> {
+    return this.request<ApiResponse<OrdersMetrics>>(
+      `/backoffice/orders/summary`
+    );
+  }
+
+  async getOrderItems(
+    orderId: string
+  ): Promise<ApiResponse<{ items: OrderItem[] }>> {
+    return this.request<ApiResponse<{ items: OrderItem[] }>>(
+      `/backoffice/orders/items/${orderId}`
     );
   }
 

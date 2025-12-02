@@ -24,6 +24,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuthStore } from "./stores/authStore";
 import { useAuthCheck } from "./hooks/useAuthCheck";
 import { Toast } from "./components/ui/Toast";
+import OrdersPage from "./pages/Orders";
 
 function App() {
   const { initializeAuth } = useAuthStore();
@@ -52,6 +53,7 @@ function App() {
           <Route path="contacts" element={<Contacts />} />
           <Route path="contacts/:id" element={<ContactDetail />} />
           <Route path="waitlist" element={<Waitlist />} />
+          <Route path="orders" element={<OrdersPage />} />
           <Route path="waitlist/:id" element={<WaitlistDetail />} />
           <Route path="vendor-signups" element={<VendorSignups />} />
           <Route path="vendor-signups/:id" element={<VendorSignupDetail />} />
