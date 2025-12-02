@@ -1,18 +1,19 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  MessageSquare, 
+import { href, Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  MessageSquare,
   UserPlus,
   Tag,
   Package,
+  Box,
   LogOut,
   Menu,
-  X
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui/Button';
-import { useAuthStore } from '../../stores/authStore';
+  X,
+} from "lucide-react";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/Button";
+import { useAuthStore } from "../../stores/authStore";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,12 +21,21 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Vendors', href: '/dashboard/vendor-signups', icon: UserPlus },
-  { name: 'Business Categories', href: '/dashboard/business-categories', icon: Tag },
-  { name: 'Product Categories', href: '/dashboard/product-categories', icon: Package },
-  { name: 'Waitlist', href: '/dashboard/waitlist', icon: Users },
-  { name: 'Contacts', href: '/dashboard/contacts', icon: MessageSquare },
+  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Vendors", href: "/dashboard/vendor-signups", icon: UserPlus },
+  {
+    name: "Business Categories",
+    href: "/dashboard/business-categories",
+    icon: Tag,
+  },
+  {
+    name: "Product Categories",
+    href: "/dashboard/product-categories",
+    icon: Package,
+  },
+  { name: "Orders", href: "/dashboard/orders", icon: Box },
+  { name: "Waitlist", href: "/dashboard/waitlist", icon: Users },
+  { name: "Contacts", href: "/dashboard/contacts", icon: MessageSquare },
 ];
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
@@ -35,26 +45,30 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   const handleLogout = () => {
     logout();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/30 bg-opacity-50 z-40 lg:hidden"
           onClick={onToggle}
         />
       )}
-      
+
       {/* Sidebar */}
-      <div className={cn(
-        'fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      )}>
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="flex items-center justify-between h-16 px-6 border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground">9jacart Admin</h1>
+          <h1 className="text-xl font-bold text-sidebar-foreground">
+            9jacart Admin
+          </h1>
           <Button
             variant="ghost"
             size="icon"
@@ -64,21 +78,23 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <X className="h-5 w-5" />
           </Button>
         </div>
-        
+
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href || 
-              (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
-            
+            const isActive =
+              location.pathname === item.href ||
+              (item.href !== "/dashboard" &&
+                location.pathname.startsWith(item.href));
+
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
                 onClick={() => window.innerWidth < 1024 && onToggle()}
               >
@@ -88,7 +104,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             );
           })}
         </nav>
-        
+
         <div className="p-4 border-t border-sidebar-border">
           {user && (
             <div className="mb-4 px-3 py-2 text-sm">
@@ -110,7 +126,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </Button>
         </div>
       </div>
-      
+
       {/* Mobile menu button */}
       <Button
         variant="ghost"

@@ -108,57 +108,20 @@ export function ProductCategoryDetail() {
   const handleDelete = async () => {
     if (!category?.categoryId) return;
 
-    const associatedCount = Number(category.associatedProducts) || 0;
-    if (associatedCount > 0) {
-      toast.error("Unable to delete category with associated products.", {
-        style: {
-          background: "#fee2e2",
-          color: "#991b1b",
-        },
-        iconTheme: {
-          primary: "#dc2626",
-          secondary: "#fee2e2",
-        },
-      });
-      return;
-    }
-
     try {
       const response = await apiService.deleteProductCategory(
         category.categoryId
       );
 
-      if (response.error) {
-        toast.error(response.message || "Unable to delete category.", {
-          style: {
-            background: "#fee2e2",
-            color: "#991b1b",
-          },
-          iconTheme: {
-            primary: "#dc2626",
-            secondary: "#fee2e2",
-          },
-        });
-        return;
-      }
-
       toast.success(response.message);
-      navigate("/dashboard/product-categories");
+
+      // Redirect back to list, same as business category
+      // navigate("/dashboard/product-categories");
     } catch (error) {
       console.error("Failed to delete product category:", error);
 
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete category",
-        {
-          style: {
-            background: "#fee2e2",
-            color: "#991b1b",
-          },
-          iconTheme: {
-            primary: "#dc2626",
-            secondary: "#fee2e2",
-          },
-        }
+        error instanceof Error ? error.message : "Failed to delete category"
       );
     }
   };
@@ -506,6 +469,7 @@ export function ProductCategoryDetail() {
                       const response = await apiService.deleteProductCategory(
                         category.categoryId
                       );
+                      navigate("/dashboard/product-categories");
                       toast.success(response.message);
                     } catch (err) {
                       console.error(err);
