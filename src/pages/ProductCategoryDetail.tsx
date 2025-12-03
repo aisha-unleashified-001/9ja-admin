@@ -113,10 +113,14 @@ export function ProductCategoryDetail() {
         category.categoryId
       );
 
-      toast.success(response.message);
-
-      // Redirect back to list, same as business category
-      // navigate("/dashboard/product-categories");
+      // Check if the message indicates an error (e.g., unable to delete)
+      if (response.message && response.message.toLowerCase().includes("unable to delete")) {
+        toast.error(response.message);
+      } else {
+        toast.success(response.message);
+        // Navigate back to list after successful deletion
+        navigate("/dashboard/product-categories");
+      }
     } catch (error) {
       console.error("Failed to delete product category:", error);
 
