@@ -39,6 +39,29 @@ export interface Contact {
   updatedAt: string;
 }
 
+export interface BuyerMessage {
+  id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorMessage {
+  id: string;
+  name: string;
+  storeName: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WaitlistEntry {
   id: string;
   business_name?: string;
@@ -165,17 +188,41 @@ export interface OrdersQuery {
   customerName?: string;
   orderNo?: string;
   paymentMethod?: string;
-  sortBy?: string; 
+  sortBy?: string;
+}
+
+export interface SplitSubaccount {
+  subaccount: string;
+  share?: number;
+  bearer_type?: string;
+}
+
+export interface SplitConfig {
+  type?: string;
+  bearer_type?: string;
+  subaccounts?: SplitSubaccount[];
 }
 
 export interface Order {
   orderNo: string;
-  totalAmount: number;
+  totalAmount: number | string;
   status: string;
-  paymentMethod: string;
+  paymentMethod?: string;
+  paymentStatus?: string | null;
+  paymentReference?: string | null;
+  paymentDate?: string | null;
+  splitPayment?: string | boolean;
+  splitConfig?: SplitConfig | null;
   customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
   createdAt: string;
   totalItemsCount: number;
+  shippingFee?: number | string;
+  vendorEarnings?: number | string;
+  vendorOrderTotal?: number | string;
+  commission?: number | string;
+  vendors?: string[];
 }
 
 export interface OrdersMetrics {

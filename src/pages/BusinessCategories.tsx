@@ -200,7 +200,7 @@ export function BusinessCategories() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                         <div className="flex items-center gap-1">
                           {/* <Calendar className="h-3 w-3" /> */}
-                          <span> Category Count:</span>
+                          <span> Business Count:</span>
                           {category.associatedBusinesses || 0}
                         </div>
                         {/* {category.updatedAt !== category.createdAt && (

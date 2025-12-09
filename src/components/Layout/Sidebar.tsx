@@ -10,6 +10,8 @@ import {
   LogOut,
   Menu,
   X,
+  Mail,
+  Store,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/Button";
@@ -34,6 +36,8 @@ const navigation = [
     icon: Package,
   },
   { name: "Orders", href: "/dashboard/orders", icon: Box },
+  { name: "Buyer Messages", href: "/dashboard/buyer-messages", icon: Mail },
+  { name: "Vendor Messages", href: "/dashboard/vendor-messages", icon: Store },
   { name: "Waitlist", href: "/dashboard/waitlist", icon: Users },
   { name: "Contacts", href: "/dashboard/contacts", icon: MessageSquare },
 ];

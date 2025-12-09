@@ -25,6 +25,13 @@ const statusColors: Record<string, string> = {
   CANCELED: "bg-red-100 text-red-700",
 };
 
+const paymentStatusColors: Record<string, string> = {
+  paid: "bg-green-100 text-green-700",
+  pending: "bg-yellow-100 text-yellow-700",
+  failed: "bg-red-100 text-red-700",
+  refunded: "bg-blue-100 text-blue-700",
+};
+
 export default function OrdersPage() {
   // Destructure metrics and fetchMetrics from the hook
   const {
@@ -195,6 +202,16 @@ export default function OrdersPage() {
   const handlePageClick = (pageNumber: number) => {
     setQuery({ page: pageNumber });
   };
+
+  const formatMoney = (value: unknown) =>
+    `₦${Number(value ?? 0).toLocaleString()}`;
+
+  const formatLabel = (value: unknown) =>
+    value
+      ? String(value)
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase())
+      : "N/A";
 
   return (
     <div className="p-6 text-white min-h-screen">
@@ -398,115 +415,212 @@ export default function OrdersPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-visible min-h-[400px]">
-        <table className="w-full text-sm border-collapse rounded-md">
-          <thead>
-            <tr className="border-b border-[#1E4700] text-white bg-[#1E4700] text-left p-4">
-              <th className="p-3 w-10">
-                <input type="checkbox" />
-              </th>
-              <th>Order ID</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Items</th>
-              <th className="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={8} className="text-center py-10 text-[#182F38]">
-                  Loading orders...
-                </td>
+      <div className="overflow-x-auto min-h-[400px] w-full">
+        <div className="inline-block min-w-full align-middle">
+          <table className="min-w-[1800px] w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-[#1E4700] text-white bg-[#1E4700]">
+                <th className="px-4 py-3 text-left font-semibold w-12">
+                  <input type="checkbox" />
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[180px]">
+                  Order ID
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[160px]">
+                  Date
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[150px]">
+                  Customer
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[120px]">
+                  Total
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
+                  Payment Status
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[130px]">
+                  Order Status
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
+                  Payment Method
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
+                  Vendor Earnings
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[120px]">
+                  Commission
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[200px]">
+                  Paystack Reference
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[120px]">
+                  Split Type
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[180px]">
+                  Split Code
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[130px]">
+                  Shipment Fee
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[100px]">
+                  Items
+                </th>
+                <th className="px-4 py-3 text-center font-semibold w-16">
+                  Actions
+                </th>
               </tr>
-            ) : orders?.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center py-10 text-[#182F38]">
-                  No orders found.
-                </td>
-              </tr>
-            ) : (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              orders.map((order: any) => (
-                <tr
-                  key={order.orderNo}
-                  className="border-b border-neutral-800 text-[#333333] hover:bg-gray-50/50"
-                >
-                  <td className="p-3">
-                    <input type="checkbox" />
-                  </td>
-
-                  <td>{order.orderNo}</td>
-                  <td>{order.createdAt}</td>
-                  <td>{order.customerName}</td>
-                  <td>₦{order.totalAmount?.toLocaleString()}</td>
-
-                  <td>
-                    <span
-                      className={`px-2 py-1 rounded-lg text-xs ${
-                        statusColors[order.status] ||
-                        statusColors[order.status?.toLowerCase()] ||
-                        "bg-gray-200 text-gray-700"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-
-                  <td>{order.totalItemsCount} items</td>
-
-                  {/* ACTION COLUMN WITH DROPDOWN */}
-                  <td className="relative px-4 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveActionId(
-                          activeActionId === order.orderNo
-                            ? null
-                            : order.orderNo
-                        );
-                      }}
-                      className={`p-1 rounded-full transition-colors ${
-                        activeActionId === order.orderNo
-                          ? "bg-gray-200 text-[#1E4700]"
-                          : "hover:bg-gray-100 hover:text-[#1E4700]"
-                      }`}
-                    >
-                      <Ellipsis className="w-5 h-5" />
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    {activeActionId === order.orderNo && (
-                      <>
-                        {/* Invisible Backdrop to close menu when clicking outside */}
-                        <div
-                          className="fixed inset-0 z-10 cursor-default"
-                          onClick={() => setActiveActionId(null)}
-                        />
-
-                        {/* Menu Items */}
-                        <div className="absolute right-10 top-2 w-36 bg-white rounded-lg shadow-xl z-20 border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedOrder(order);
-                              setActiveActionId(null);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm text-[#182F38] hover:bg-gray-50 hover:text-[#1E4700] font-medium transition-colors"
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      </>
-                    )}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={16} className="px-4 py-10 text-center text-[#182F38]">
+                    Loading orders...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : orders?.length === 0 ? (
+                <tr>
+                  <td colSpan={16} className="px-4 py-10 text-center text-[#182F38]">
+                    No orders found.
+                  </td>
+                </tr>
+              ) : (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                orders.map((order: any) => (
+                  <tr
+                    key={order.orderNo}
+                    className="border-b border-gray-200 text-[#333333] hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <input type="checkbox" />
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {order.orderNo}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.createdAt}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.customerName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {formatMoney(order.totalAmount)}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-lg text-xs font-medium capitalize ${
+                          paymentStatusColors[
+                            order.paymentStatus?.toLowerCase?.() || ""
+                          ] || "bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {order.paymentStatus ? order.paymentStatus : "N/A"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-lg text-xs font-medium ${
+                          statusColors[order.status] ||
+                          statusColors[order.status?.toLowerCase()] ||
+                          "bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {formatLabel(order.paymentMethod)}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {formatMoney(order.vendorEarnings ?? order.vendorOrderTotal)}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {formatMoney(
+                        order.commission ??
+                          (order.totalAmount != null &&
+                          order.vendorEarnings != null
+                            ? Number(order.totalAmount) -
+                              Number(order.vendorEarnings)
+                            : undefined)
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] text-xs font-mono">
+                      {order.paymentReference || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {formatLabel(order.splitConfig?.type || order.splitPayment)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] text-xs font-mono">
+                      {order.splitConfig?.subaccounts?.[0]?.subaccount ||
+                        order.splitConfig?.bearer_type ||
+                        order.splitCode ||
+                        "N/A"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {formatMoney(order.shippingFee)}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.totalItemsCount} items
+                    </td>
+
+                    {/* ACTION COLUMN WITH DROPDOWN */}
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveActionId(
+                            activeActionId === order.orderNo
+                              ? null
+                              : order.orderNo
+                          );
+                        }}
+                        className={`p-1.5 rounded-full transition-colors ${
+                          activeActionId === order.orderNo
+                            ? "bg-gray-200 text-[#1E4700]"
+                            : "hover:bg-gray-100 hover:text-[#1E4700]"
+                        }`}
+                      >
+                        <Ellipsis className="w-5 h-5" />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {activeActionId === order.orderNo && (
+                        <>
+                          {/* Invisible Backdrop to close menu when clicking outside */}
+                          <div
+                            className="fixed inset-0 z-10 cursor-default"
+                            onClick={() => setActiveActionId(null)}
+                          />
+
+                          {/* Menu Items */}
+                          <div className="absolute right-10 top-2 w-36 bg-white rounded-lg shadow-xl z-20 border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedOrder(order);
+                                setActiveActionId(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm text-[#182F38] hover:bg-gray-50 hover:text-[#1E4700] font-medium transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
