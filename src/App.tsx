@@ -13,6 +13,7 @@ import { BuyerMessages } from "./pages/BuyerMessages";
 import { BuyerMessageDetail } from "./pages/BuyerMessageDetail";
 import { VendorMessages } from "./pages/VendorMessages";
 import { VendorMessageDetail } from "./pages/VendorMessageDetail";
+import { CommissionChange } from "./pages/CommissionChange";
 import { Waitlist } from "./pages/Waitlist";
 import { WaitlistDetail } from "./pages/WaitlistDetail";
 import { VendorSignups } from "./pages/VendorSignups";
@@ -60,6 +61,7 @@ function App() {
           <Route path="buyer-messages/:id" element={<BuyerMessageDetail />} />
           <Route path="vendor-messages" element={<VendorMessages />} />
           <Route path="vendor-messages/:id" element={<VendorMessageDetail />} />
+          <Route path="commission-change" element={<CommissionChange />} />
           <Route path="waitlist" element={<Waitlist />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="waitlist/:id" element={<WaitlistDetail />} />

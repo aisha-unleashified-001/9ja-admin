@@ -455,6 +455,27 @@ class ApiService {
       `/product/category?page=1&perPage=10000`
     );
   }
+
+  // Commission
+  async getCommission(): Promise<ApiResponse<{ commission: number }>> {
+    // TODO: Replace endpoint when backend provides it
+    return this.request<ApiResponse<{ commission: number }>>(
+      `/backoffice/commission`
+    );
+  }
+
+  async updateCommission(data: {
+    commission: number;
+  }): Promise<ApiResponse<{ message: string; commission: number }>> {
+    // TODO: Replace endpoint when backend provides it
+    return this.request<ApiResponse<{ message: string; commission: number }>>(
+      `/backoffice/commission`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+  }
 }
 
 export const apiService = new ApiService();

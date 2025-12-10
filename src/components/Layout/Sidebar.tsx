@@ -12,6 +12,7 @@ import {
   X,
   Mail,
   Store,
+  Percent,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/Button";
@@ -38,6 +39,7 @@ const navigation = [
   { name: "Orders", href: "/dashboard/orders", icon: Box },
   { name: "Buyer Messages", href: "/dashboard/buyer-messages", icon: Mail },
   { name: "Vendor Messages", href: "/dashboard/vendor-messages", icon: Store },
+  { name: "Commission Change", href: "/dashboard/commission-change", icon: Percent },
   { name: "Waitlist", href: "/dashboard/waitlist", icon: Users },
   { name: "Contacts", href: "/dashboard/contacts", icon: MessageSquare },
 ];
