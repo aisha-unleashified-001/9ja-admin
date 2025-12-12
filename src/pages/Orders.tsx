@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import OrdersIcon from "@/assets/Orders.png";
 import deliveredIcon from "@/assets/package.png";
 import returnsIcon from "@/assets/truck.png";
@@ -10,6 +11,7 @@ import {
   ChevronRight,
   ArrowUpDown,
   Filter,
+  ChevronDown,
 } from "lucide-react";
 import { useOrders } from "@/hooks/useOrders";
 
@@ -19,10 +21,14 @@ const statusColors: Record<string, string> = {
   canceled: "bg-red-100 text-red-700",
   pending: "bg-blue-100 text-blue-700",
   order_confirmed: "bg-purple-100 text-purple-700",
+  confirmed: "bg-purple-100 text-purple-700",
+  returned: "bg-orange-100 text-orange-700",
   // Uppercase variants for API compatibility
   PENDING: "bg-blue-100 text-blue-700",
   COMPLETED: "bg-green-100 text-green-700",
   CANCELED: "bg-red-100 text-red-700",
+  CONFIRMED: "bg-purple-100 text-purple-700",
+  RETURNED: "bg-orange-100 text-orange-700",
 };
 
 const paymentStatusColors: Record<string, string> = {
@@ -43,11 +49,15 @@ export default function OrdersPage() {
     fetchOrders,
     fetchMetrics,
     setQuery,
+    updateOrderStatus,
   } = useOrders();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
+  const [activeStatusDropdownId, setActiveStatusDropdownId] = useState<string | null>(null);
+  const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   // -- UI State for Dropdowns --
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -65,7 +75,7 @@ export default function OrdersPage() {
     query.customerName || query.orderNo || ""
   );
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [status, setStatus] = useState(query.status ?? "all");
+  const [status, setStatus] = useState(query.status?.toLowerCase() ?? "");
 
   const currentPage = query.page || 1;
   const totalPages = pagination?.totalPages || 1;
@@ -73,6 +83,7 @@ export default function OrdersPage() {
   // Refs for click-outside detection
   const sortRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -85,6 +96,13 @@ export default function OrdersPage() {
         !filterRef.current.contains(event.target as Node)
       ) {
         setIsFilterOpen(false);
+      }
+      // Close status dropdowns
+      const clickedInsideStatusDropdown = Object.values(statusDropdownRefs.current).some(
+        (ref) => ref && ref.contains(event.target as Node)
+      );
+      if (!clickedInsideStatusDropdown) {
+        setActiveStatusDropdownId(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -116,13 +134,13 @@ export default function OrdersPage() {
       setDebouncedSearch(storeSearch);
     }
 
-    const currentStatus = query.status || "all";
+    const currentStatus = query.status?.toLowerCase() || "";
     if (currentStatus !== status) setStatus(currentStatus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.orderNo, query.customerName, query.status]);
 
   useEffect(() => {
-    const mappedStatus = status === "all" ? "" : status.toUpperCase();
+    const mappedStatus = status ? status.toUpperCase() : "";
     const cleanSearch = debouncedSearch.trim();
     const isOrderNo = cleanSearch.toUpperCase().startsWith("ORD");
 
@@ -253,14 +271,14 @@ export default function OrdersPage() {
       {/* Tabs */}
       <div className="flex gap-6 mb-6 text-sm text-black">
         {[
-          { label: "All", value: "all" },
+          { label: "All", value: "" },
+          { label: "Pending", value: "pending" },
+          { label: "Confirmed", value: "confirmed" },
           { label: "Completed", value: "completed" },
-          { label: "Processed", value: "pending" },
           { label: "Returned", value: "returned" },
-          { label: "Canceled", value: "canceled" },
         ].map((tab) => (
           <button
-            key={tab.value}
+            key={tab.value || "all"}
             className={
               status === tab.value
                 ? "text-[#1E4700] font-semibold"
@@ -415,9 +433,9 @@ export default function OrdersPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto min-h-[400px] w-full">
+      <div className="overflow-x-auto min-h-[400px] w-full overflow-y-visible">
         <div className="inline-block min-w-full align-middle">
-          <table className="min-w-[1800px] w-full text-sm border-collapse">
+          <table className="min-w-[2400px] w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-[#1E4700] text-white bg-[#1E4700]">
                 <th className="px-4 py-3 text-left font-semibold w-12">
@@ -431,6 +449,12 @@ export default function OrdersPage() {
                 </th>
                 <th className="px-4 py-3 text-left font-semibold min-w-[150px]">
                   Customer
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[180px]">
+                  Customer Email
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[150px]">
+                  Customer Phone
                 </th>
                 <th className="px-4 py-3 text-left font-semibold min-w-[120px]">
                   Total
@@ -447,6 +471,12 @@ export default function OrdersPage() {
                 <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
                   Vendor Earnings
                 </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
+                  Unique Vendors Count
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[140px]">
+                  Vendors Fees
+                </th>
                 <th className="px-4 py-3 text-left font-semibold min-w-[120px]">
                   Commission
                 </th>
@@ -458,6 +488,9 @@ export default function OrdersPage() {
                 </th>
                 <th className="px-4 py-3 text-left font-semibold min-w-[180px]">
                   Split Code
+                </th>
+                <th className="px-4 py-3 text-left font-semibold min-w-[150px]">
+                  Split Name
                 </th>
                 <th className="px-4 py-3 text-left font-semibold min-w-[130px]">
                   Shipment Fee
@@ -473,13 +506,13 @@ export default function OrdersPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={16} className="px-4 py-10 text-center text-[#182F38]">
+                  <td colSpan={21} className="px-4 py-10 text-center text-[#182F38]">
                     Loading orders...
                   </td>
                 </tr>
               ) : orders?.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="px-4 py-10 text-center text-[#182F38]">
+                  <td colSpan={21} className="px-4 py-10 text-center text-[#182F38]">
                     No orders found.
                   </td>
                 </tr>
@@ -503,6 +536,12 @@ export default function OrdersPage() {
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
                       {order.customerName}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.customerEmail || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.customerPhone || "N/A"}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
                       {formatMoney(order.totalAmount)}
                     </td>
@@ -519,16 +558,120 @@ export default function OrdersPage() {
                       </span>
                     </td>
 
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-lg text-xs font-medium ${
-                          statusColors[order.status] ||
-                          statusColors[order.status?.toLowerCase()] ||
-                          "bg-gray-200 text-gray-700"
-                        }`}
+                    <td className="px-4 py-3 whitespace-nowrap relative">
+                      <div 
+                        className="relative inline-block"
+                        ref={(el) => {
+                          if (order.orderNo) {
+                            statusDropdownRefs.current[order.orderNo] = el;
+                          }
+                        }}
                       >
-                        {order.status}
-                      </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const button = e.currentTarget;
+                            const rect = button.getBoundingClientRect();
+                            setStatusDropdownPosition({
+                              top: rect.bottom + 4,
+                              left: rect.left,
+                            });
+                            setActiveStatusDropdownId(
+                              activeStatusDropdownId === order.orderNo
+                                ? null
+                                : order.orderNo
+                            );
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium ${
+                            statusColors[order.status] ||
+                            statusColors[order.status?.toLowerCase()] ||
+                            "bg-gray-200 text-gray-700"
+                          } hover:opacity-80 transition-opacity`}
+                        >
+                          {order.status}
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                        
+                        {/* Status Dropdown Menu */}
+                        {activeStatusDropdownId === order.orderNo && statusDropdownPosition && 
+                          createPortal(
+                            <>
+                              {/* Invisible Backdrop to close menu when clicking outside */}
+                              <div
+                                className="fixed inset-0 z-40 cursor-default"
+                                onClick={() => {
+                                  setActiveStatusDropdownId(null);
+                                  setStatusDropdownPosition(null);
+                                }}
+                              />
+                              
+                              {/* Menu Items */}
+                              <div 
+                                className="fixed w-36 bg-white rounded-lg shadow-xl z-50 border border-gray-100 py-1"
+                                style={{
+                                  top: `${statusDropdownPosition.top}px`,
+                                  left: `${statusDropdownPosition.left}px`,
+                                }}
+                              >
+                                {["Pending", "Confirmed", "Completed", "Returned"].map((statusOption, index) => {
+                                  const isCurrentStatus = order.status?.toUpperCase() === statusOption.toUpperCase();
+                                  const isUpdating = updatingStatus === order.orderNo;
+                                  
+                                  return (
+                                    <button
+                                      key={statusOption}
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        
+                                        // Don't update if it's already the current status
+                                        if (isCurrentStatus) {
+                                          setActiveStatusDropdownId(null);
+                                          setStatusDropdownPosition(null);
+                                          return;
+                                        }
+                                        
+                                        setUpdatingStatus(order.orderNo);
+                                        setActiveStatusDropdownId(null);
+                                        setStatusDropdownPosition(null);
+                                        
+                                        // Map the status to the correct API format
+                                        const statusMap: Record<string, string> = {
+                                          "Pending": "PENDING",
+                                          "Confirmed": "CONFIRMED",
+                                          "Completed": "COMPLETED",
+                                          "Returned": "RETURNED",
+                                        };
+                                        
+                                        const apiStatus = statusMap[statusOption] || statusOption.toUpperCase();
+                                        const result = await updateOrderStatus(order.orderNo, apiStatus);
+                                        
+                                        setUpdatingStatus(null);
+                                        
+                                        if (!result.success) {
+                                          alert(result.error || "Failed to update order status");
+                                        }
+                                      }}
+                                      disabled={isCurrentStatus || isUpdating}
+                                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                                        index < 3 ? "border-b border-gray-100" : ""
+                                      } ${
+                                        isCurrentStatus
+                                          ? "text-[#1E4700] font-semibold bg-gray-50 cursor-default"
+                                          : isUpdating
+                                          ? "text-gray-400 cursor-wait"
+                                          : "text-gray-600 hover:bg-gray-50 cursor-pointer"
+                                      }`}
+                                    >
+                                      {isUpdating ? "Updating..." : statusOption}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>,
+                            document.body
+                          )
+                        }
+                      </div>
                     </td>
 
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
@@ -537,6 +680,16 @@ export default function OrdersPage() {
 
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
                       {formatMoney(order.vendorEarnings ?? order.vendorOrderTotal)}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {(order.uniqueVendorsCount ?? 
+                       (Array.isArray(order.vendors) ? order.vendors.length : 0)) || 
+                       "N/A"}
+                    </td>
+
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
+                      {formatMoney(order.vendorsFees ?? order.vendorFees)}
                     </td>
 
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
@@ -562,6 +715,12 @@ export default function OrdersPage() {
                         order.splitCode ||
                         "N/A"}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#182F38]">
+                      {order.splitName || 
+                       order.splitConfig?.bearer_type || 
+                       formatLabel(order.splitConfig?.type) || 
+                       "N/A"}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[#182F38] font-medium">
                       {formatMoney(order.shippingFee)}
                     </td>
@@ -571,49 +730,51 @@ export default function OrdersPage() {
                     </td>
 
                     {/* ACTION COLUMN WITH DROPDOWN */}
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveActionId(
+                    <td className="px-4 py-3 whitespace-nowrap text-center relative">
+                      <div className="relative inline-block">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveActionId(
+                              activeActionId === order.orderNo
+                                ? null
+                                : order.orderNo
+                            );
+                          }}
+                          className={`p-1.5 rounded-full transition-colors ${
                             activeActionId === order.orderNo
-                              ? null
-                              : order.orderNo
-                          );
-                        }}
-                        className={`p-1.5 rounded-full transition-colors ${
-                          activeActionId === order.orderNo
-                            ? "bg-gray-200 text-[#1E4700]"
-                            : "hover:bg-gray-100 hover:text-[#1E4700]"
-                        }`}
-                      >
-                        <Ellipsis className="w-5 h-5" />
-                      </button>
+                              ? "bg-gray-200 text-[#1E4700]"
+                              : "hover:bg-gray-100 hover:text-[#1E4700]"
+                          }`}
+                        >
+                          <Ellipsis className="w-5 h-5" />
+                        </button>
 
-                      {/* Dropdown Menu */}
-                      {activeActionId === order.orderNo && (
-                        <>
-                          {/* Invisible Backdrop to close menu when clicking outside */}
-                          <div
-                            className="fixed inset-0 z-10 cursor-default"
-                            onClick={() => setActiveActionId(null)}
-                          />
+                        {/* Dropdown Menu */}
+                        {activeActionId === order.orderNo && (
+                          <>
+                            {/* Invisible Backdrop to close menu when clicking outside */}
+                            <div
+                              className="fixed inset-0 z-10 cursor-default"
+                              onClick={() => setActiveActionId(null)}
+                            />
 
-                          {/* Menu Items */}
-                          <div className="absolute right-10 top-2 w-36 bg-white rounded-lg shadow-xl z-20 border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedOrder(order);
-                                setActiveActionId(null);
-                              }}
-                              className="w-full text-left px-4 py-3 text-sm text-[#182F38] hover:bg-gray-50 hover:text-[#1E4700] font-medium transition-colors"
-                            >
-                              View Details
-                            </button>
-                          </div>
-                        </>
-                      )}
+                            {/* Menu Items */}
+                            <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-xl z-20 border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedOrder(order);
+                                  setActiveActionId(null);
+                                }}
+                                className="w-full text-left px-4 py-3 text-sm text-[#182F38] hover:bg-gray-50 hover:text-[#1E4700] font-medium transition-colors"
+                              >
+                                View Details
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

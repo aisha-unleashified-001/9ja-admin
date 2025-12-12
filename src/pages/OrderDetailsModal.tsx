@@ -30,11 +30,16 @@ export default function OrderDetailsModal({
       // If fetchedData is an object, check for .data or use it directly
       apiData = (fetchedData as any)?.data || fetchedData || {};
 
-      // Check if we found a valid object containing 'items'
-      const hasItems = apiData && "items" in apiData;
-
-      // Extract the items array safely
-      itemsList = hasItems && Array.isArray(apiData.items) ? apiData.items : [];
+      // Check for itemsByVendor structure first
+      if (apiData?.itemsByVendor && Array.isArray(apiData.itemsByVendor)) {
+        // Flatten items from all vendors
+        itemsList = apiData.itemsByVendor.flatMap((vendor: any) => 
+          vendor.items || []
+        );
+      } else if (apiData?.items && Array.isArray(apiData.items)) {
+        // Fallback to direct items array if present
+        itemsList = apiData.items;
+      }
     }
 
     // Merge initial data (table) with detailed data (API)
@@ -184,9 +189,8 @@ export default function OrderDetailsModal({
               <span className="font-bold">
                 ₦
                 {Number(
-                  enrichedOrder.vendorOrderTotal ||
-                    enrichedOrder.subtotal ||
-                    enrichedOrder.totalAmount ||
+                  enrichedOrder.vendorEarnings ??
+                    enrichedOrder.vendorOrderTotal ??
                     0
                 ).toLocaleString()}
               </span>
@@ -195,6 +199,20 @@ export default function OrderDetailsModal({
               <span>Shipping fee</span>
               <span className="font-bold">
                 ₦{Number(enrichedOrder.shippingFee || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between text-[#182F38]">
+              <span>Commission</span>
+              <span className="font-bold">
+                ₦
+                {Number(
+                  enrichedOrder.commission ??
+                    (enrichedOrder.totalAmount != null &&
+                    enrichedOrder.vendorEarnings != null
+                      ? Number(enrichedOrder.totalAmount) -
+                        Number(enrichedOrder.vendorEarnings)
+                      : 0)
+                ).toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between text-[#1E4700] text-base mt-2 pt-2 border-t border-gray-200">

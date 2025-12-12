@@ -21,78 +21,16 @@ import {
   X,
   Store,
 } from "lucide-react";
-import type { VendorMessage } from "../types/api";
+import type { VendorMessage, TicketMessage } from "../types/api";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../stores/authStore";
-
-// Mock data - will be replaced with API call when endpoint is available
-const mockVendorMessages: VendorMessage[] = [
-  {
-    id: "1",
-    name: "Adeola Ogunleye",
-    storeName: "Fresh Farm Produce",
-    email: "adeola@freshfarm.com",
-    phoneNumber: "+234 801 111 2222",
-    subject: "Account Verification Issue",
-    message:
-      "I'm having trouble verifying my vendor account. The documents I uploaded seem to be stuck in review.",
-    createdAt: "2025-12-08T11:30:00Z",
-    updatedAt: "2025-12-08T11:30:00Z",
-  },
-  {
-    id: "2",
-    name: "Chukwuemeka Nwosu",
-    storeName: "Nwosu Electronics",
-    email: "chukwu@nwosuelectronics.com",
-    phoneNumber: "+234 802 222 3333",
-    subject: "Payment Disbursement",
-    message:
-      "When will my earnings from last month be disbursed? I haven't received payment yet.",
-    createdAt: "2025-12-07T15:45:30Z",
-    updatedAt: "2025-12-07T15:45:30Z",
-  },
-  {
-    id: "3",
-    name: "Fatima Ibrahim",
-    storeName: "Ibrahim Fashion House",
-    email: "fatima@ibrahimfashion.com",
-    phoneNumber: "+234 803 333 4444",
-    subject: "Product Listing Question",
-    message:
-      "How do I add multiple product images? I can only see one image upload option.",
-    createdAt: "2025-12-06T10:20:15Z",
-    updatedAt: "2025-12-06T10:20:15Z",
-  },
-  {
-    id: "4",
-    name: "Tunde Adebayo",
-    storeName: "Adebayo Home Essentials",
-    email: "tunde@adebayohome.com",
-    phoneNumber: "+234 804 444 5555",
-    subject: "Commission Rate Inquiry",
-    message:
-      "What is the current commission rate for my category? I want to understand the fee structure better.",
-    createdAt: "2025-12-05T14:10:45Z",
-    updatedAt: "2025-12-05T14:10:45Z",
-  },
-  {
-    id: "5",
-    name: "Grace Okonkwo",
-    storeName: "Okonkwo Beauty Supplies",
-    email: "grace@okonkwobeauty.com",
-    phoneNumber: "+234 805 555 6666",
-    subject: "Order Cancellation",
-    message:
-      "A customer cancelled an order after I already prepared it. What's the policy on this?",
-    createdAt: "2025-12-04T09:15:20Z",
-    updatedAt: "2025-12-04T09:15:20Z",
-  },
-];
+import { apiService } from "../services/api";
 
 export function VendorMessageDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthStore();
   const [message, setMessage] = useState<VendorMessage | null>(null);
+  const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyForm, setReplyForm] = useState({
@@ -110,27 +48,68 @@ export function VendorMessageDetail() {
   }, [user]);
 
   useEffect(() => {
-    // Simulate API call - will be replaced with actual API call when endpoint is available
     const fetchMessage = async () => {
       if (!id) return;
 
       setLoading(true);
       try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const foundMessage = mockVendorMessages.find((msg) => msg.id === id);
-        if (foundMessage) {
-          setMessage(foundMessage);
-          // Pre-fill reply form with vendor's subject
-          setReplyForm((prev) => ({
-            ...prev,
-            subject: `Re: ${foundMessage.subject}`,
-          }));
+        let ticketSubject = "Ticket";
+        
+        // Try to fetch ticket info to get subject (search in first few pages)
+        try {
+          for (let page = 1; page <= 3; page++) {
+            const ticketsResponse = await apiService.getTickets(page, 10);
+            const ticket = ticketsResponse.data?.tickets?.find(t => t.ticketId === id);
+            if (ticket) {
+              ticketSubject = ticket.subject;
+              break;
+            }
+            // If we've reached the last page, stop searching
+            if (ticketsResponse.data?.pagination?.currentPage >= ticketsResponse.data?.pagination?.totalPages) {
+              break;
+            }
+          }
+        } catch (error) {
+          console.warn("Could not fetch ticket subject:", error);
+        }
+        
+        // Fetch ticket messages
+        const response = await apiService.getTicketMessages(id);
+        if (response.data && response.data.messages) {
+          const messages = response.data.messages;
+          setTicketMessages(messages);
+          
+          // Get sender info from the first message (usually the vendor)
+          const firstMessage = messages[0];
+          if (firstMessage?.senderInfo) {
+            // Map to VendorMessage format for compatibility with existing UI
+            const vendorMessage: VendorMessage = {
+              id: firstMessage.ticketId,
+              name: firstMessage.senderInfo.name || "Vendor",
+              storeName: firstMessage.senderInfo.business_name || "N/A",
+              email: firstMessage.senderInfo.email || "",
+              phoneNumber: firstMessage.senderInfo.phone || "",
+              subject: ticketSubject,
+              message: firstMessage.message || "",
+              createdAt: firstMessage.createdAt,
+              updatedAt: messages[messages.length - 1]?.createdAt || firstMessage.createdAt,
+            };
+            setMessage(vendorMessage);
+            
+            // Pre-fill reply form with vendor's subject
+            setReplyForm((prev) => ({
+              ...prev,
+              subject: `Re: ${ticketSubject}`,
+            }));
+          }
         }
       } catch (error) {
         console.error("Failed to fetch vendor message:", error);
-        toast.error("Failed to load message");
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to load message";
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -149,20 +128,30 @@ export function VendorMessageDetail() {
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // TODO: Replace with actual API call when endpoint is available
-    // try {
-    //   await apiService.replyToVendorMessage(id, replyForm);
-    //   toast.success("Reply sent successfully");
-    //   setShowReplyModal(false);
-    //   setReplyForm({ ...replyForm, message: "" });
-    // } catch (error) {
-    //   toast.error("Failed to send reply");
-    // }
+    if (!id || !replyForm.message.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
 
-    // Mock implementation
-    toast.success("Reply sent successfully (mock)");
-    setShowReplyModal(false);
-    setReplyForm({ ...replyForm, message: "" });
+    try {
+      await apiService.replyToTicket(id, replyForm.message);
+      toast.success("Reply sent successfully");
+      setShowReplyModal(false);
+      setReplyForm({ ...replyForm, message: "" });
+      
+      // Refresh ticket messages to show the new reply
+      const response = await apiService.getTicketMessages(id);
+      if (response.data && response.data.messages) {
+        setTicketMessages(response.data.messages);
+      }
+    } catch (error) {
+      console.error("Failed to send reply:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to send reply";
+      toast.error(errorMessage);
+    }
   };
 
   if (loading) {
@@ -211,7 +200,7 @@ export function VendorMessageDetail() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-x-hidden">
         <div className="flex items-center gap-4">
           <Link to="/dashboard/vendor-messages">
             <Button variant="outline" size="sm">
@@ -222,74 +211,108 @@ export function VendorMessageDetail() {
           <h1 className="text-3xl font-bold">Vendor Message Details</h1>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2">
-            <Card>
+        <div className="grid gap-6 md:grid-cols-3 w-full max-w-full overflow-x-hidden">
+          <div className="md:col-span-2 min-w-0 max-w-full overflow-x-hidden">
+            <Card className="w-full max-w-full overflow-x-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Message
+                  Messages
                 </CardTitle>
                 <CardDescription>Subject: {message.subject}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-wrap">{message.message}</p>
+              <CardContent className="overflow-x-hidden">
+                <div className="space-y-4 w-full max-w-full overflow-x-hidden">
+                  {ticketMessages.length > 0 ? (
+                    ticketMessages.map((msg) => (
+                      <div
+                        key={msg.messageId}
+                        className={`p-4 rounded-lg border w-full max-w-full overflow-x-hidden ${
+                          msg.isOwnMessage
+                            ? "bg-primary/5 border-primary/20 ml-8"
+                            : "bg-muted/50 mr-8"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="min-w-0 flex-1 overflow-x-hidden">
+                            <p className="font-medium text-sm break-words">
+                              {msg.isOwnMessage
+                                ? "You"
+                                : msg.senderInfo?.name || "Vendor"}
+                            </p>
+                            {msg.senderInfo?.business_name && (
+                              <p className="text-xs text-muted-foreground break-words">
+                                {msg.senderInfo.business_name}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                            {msg.timeAgo || new Date(msg.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm break-words max-w-full">{msg.message}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="prose max-w-none w-full overflow-x-hidden">
+                      <p className="whitespace-pre-wrap break-words max-w-full">{message.message}</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card>
+          <div className="space-y-6 min-w-0 max-w-full overflow-x-hidden">
+            <Card className="w-full max-w-full overflow-x-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
                   Vendor Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+              <CardContent className="space-y-4 overflow-x-hidden">
+                <div className="overflow-x-hidden">
                   <label className="text-sm font-medium text-muted-foreground">
                     Full Name
                   </label>
-                  <p className="font-medium">{message.name}</p>
+                  <p className="font-medium break-words">{message.name}</p>
                 </div>
-                <div>
+                <div className="overflow-x-hidden">
                   <label className="text-sm font-medium text-muted-foreground">
                     Store Name
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Store className="h-4 w-4 text-muted-foreground" />
-                    <p className="font-medium">{message.storeName}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Store className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="font-medium break-words min-w-0 flex-1 overflow-x-hidden">{message.storeName}</p>
                   </div>
                 </div>
-                <div>
+                <div className="overflow-x-hidden">
                   <label className="text-sm font-medium text-muted-foreground">
                     Email
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <a
                       href={`mailto:${message.email}`}
-                      className="text-primary hover:underline"
+                      className="text-primary hover:underline break-words min-w-0 flex-1 overflow-x-hidden"
                     >
                       {message.email}
                     </a>
                   </div>
                 </div>
-                <div>
+                <div className="overflow-x-hidden">
                   <label className="text-sm font-medium text-muted-foreground">
                     Phone Number
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{message.phoneNumber}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium break-words min-w-0 flex-1">{message.phoneNumber}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleCopyPhoneNumber}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 flex-shrink-0"
                       title="Copy phone number"
                     >
                       <Copy className="h-4 w-4" />
@@ -435,6 +458,7 @@ export function VendorMessageDetail() {
     </>
   );
 }
+
 
 
 

@@ -14,8 +14,11 @@ import type {
   ReinstateVendorRequest,
   OrdersQuery,
   OrdersResponse,
-  OrderItem,
+  OrderItemsResponse,
   OrdersMetrics,
+  Order,
+  TicketsResponse,
+  TicketMessagesResponse,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -343,10 +346,23 @@ class ApiService {
     );
   }
 
+  async updateOrderStatus(
+    orderNo: string,
+    status: string
+  ): Promise<ApiResponse<{ message: string; order: Order }>> {
+    return this.request<ApiResponse<{ message: string; order: Order }>>(
+      `/backoffice/orders/${orderNo}/status`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }
+    );
+  }
+
   async getOrderItems(
     orderId: string
-  ): Promise<ApiResponse<{ items: OrderItem[] }>> {
-    return this.request<ApiResponse<{ items: OrderItem[] }>>(
+  ): Promise<ApiResponse<OrderItemsResponse>> {
+    return this.request<ApiResponse<OrderItemsResponse>>(
       `/backoffice/orders/items/${orderId}`
     );
   }
@@ -473,6 +489,45 @@ class ApiService {
       {
         method: "PUT",
         body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // Tickets
+  async getTickets(
+    page = 1,
+    perPage = 10,
+    search?: string
+  ): Promise<ApiResponse<TicketsResponse>> {
+    const params = new URLSearchParams({
+      page: String(page),
+      perPage: String(perPage),
+    });
+    if (search) {
+      params.append("search", search);
+    }
+    return this.request<ApiResponse<TicketsResponse>>(
+      `/ticket/support?${params.toString()}`
+    );
+  }
+
+  async getTicketMessages(
+    ticketId: string
+  ): Promise<ApiResponse<TicketMessagesResponse>> {
+    return this.request<ApiResponse<TicketMessagesResponse>>(
+      `/ticket/get-messages/${ticketId}`
+    );
+  }
+
+  async replyToTicket(
+    ticketId: string,
+    message: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/ticket/reply-message/${ticketId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message }),
       }
     );
   }

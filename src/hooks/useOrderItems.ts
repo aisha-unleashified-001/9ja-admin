@@ -21,7 +21,20 @@ export function useOrderItems(orderId: string | undefined) {
         if (response.error) {
           throw new Error(response.message);
         }
-        setOrderItems(response.data.items || []);
+        
+        // Extract items from itemsByVendor structure
+        let itemsList: any[] = [];
+        if (response.data?.itemsByVendor && Array.isArray(response.data.itemsByVendor)) {
+          // Flatten items from all vendors
+          itemsList = response.data.itemsByVendor.flatMap((vendor: any) => 
+            vendor.items || []
+          );
+        } else if (response.data?.items && Array.isArray(response.data.items)) {
+          // Fallback to direct items array if present
+          itemsList = response.data.items;
+        }
+        
+        setOrderItems(itemsList);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "An unknown error occurred";

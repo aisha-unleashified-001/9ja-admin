@@ -69,6 +69,32 @@ export function useOrders() {
     [setQueryState]
   );
 
+  const updateOrderStatus = useCallback(
+    async (orderNo: string, status: string) => {
+      try {
+        const response = await apiService.updateOrderStatus(orderNo, status);
+        if (response.error) {
+          throw new Error(response.message);
+        }
+        // Update the order in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.orderNo === orderNo ? { ...order, status } : order
+          )
+        );
+        // Refresh metrics
+        await fetchMetrics();
+        return { success: true };
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update order status";
+        console.error("Failed to update order status:", err);
+        return { success: false, error: errorMessage };
+      }
+    },
+    [fetchMetrics]
+  );
+
   return {
     orders,
     pagination,
@@ -79,5 +105,6 @@ export function useOrders() {
     fetchOrders,
     fetchMetrics,
     setQuery,
+    updateOrderStatus,
   };
 }

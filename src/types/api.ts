@@ -62,6 +62,55 @@ export interface VendorMessage {
   updatedAt: string;
 }
 
+export interface Ticket {
+  ticketId: string;
+  subject: string;
+  status: string;
+  priority: string;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+  userType?: string; // VENDOR, BUYER, etc.
+}
+
+export interface TicketsResponse {
+  pagination: {
+    currentPage: number;
+    perPage: number;
+    totalPages: number;
+    totalItems: number;
+  };
+  tickets: Ticket[];
+}
+
+export interface SenderInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  business_name?: string;
+  type: string;
+}
+
+export interface TicketMessage {
+  messageId: string;
+  ticketId: string;
+  message: string;
+  messageType: string;
+  senderType: string;
+  senderId: string;
+  senderInfo: SenderInfo;
+  isOwnMessage: boolean;
+  isRead: boolean;
+  createdAt: string;
+  timeAgo?: string;
+}
+
+export interface TicketMessagesResponse {
+  messages: TicketMessage[];
+}
+
 export interface WaitlistEntry {
   id: string;
   business_name?: string;
@@ -213,6 +262,7 @@ export interface Order {
   paymentDate?: string | null;
   splitPayment?: string | boolean;
   splitConfig?: SplitConfig | null;
+  splitName?: string;
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -223,6 +273,9 @@ export interface Order {
   vendorOrderTotal?: number | string;
   commission?: number | string;
   vendors?: string[];
+  uniqueVendorsCount?: number;
+  vendorsFees?: number | string;
+  vendorFees?: number | string;
 }
 
 export interface OrdersMetrics {
@@ -256,4 +309,13 @@ export interface OrderItem {
   quantity: number;
   price: number;
   image?: string;
+}
+
+export interface VendorItems {
+  items: OrderItem[];
+}
+
+export interface OrderItemsResponse {
+  items?: OrderItem[];
+  itemsByVendor?: VendorItems[];
 }
