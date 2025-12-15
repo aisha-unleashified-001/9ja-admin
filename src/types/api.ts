@@ -111,6 +111,78 @@ export interface TicketMessagesResponse {
   messages: TicketMessage[];
 }
 
+export interface BuyerMessage {
+  id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorMessage {
+  id: string;
+  name: string;
+  storeName: string;
+  email: string;
+  phoneNumber: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Ticket {
+  ticketId: string;
+  subject: string;
+  status: string;
+  priority: string;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+  userType?: string; // VENDOR, BUYER, etc.
+}
+
+export interface TicketsResponse {
+  pagination: {
+    currentPage: number;
+    perPage: number;
+    totalPages: number;
+    totalItems: number;
+  };
+  tickets: Ticket[];
+}
+
+export interface SenderInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  business_name?: string;
+  type: string;
+}
+
+export interface TicketMessage {
+  messageId: string;
+  ticketId: string;
+  message: string;
+  messageType: string;
+  senderType: string;
+  senderId: string;
+  senderInfo: SenderInfo;
+  isOwnMessage: boolean;
+  isRead: boolean;
+  createdAt: string;
+  timeAgo?: string;
+}
+
+export interface TicketMessagesResponse {
+  messages: TicketMessage[];
+}
+
 export interface WaitlistEntry {
   id: string;
   business_name?: string;
