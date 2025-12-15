@@ -12,6 +12,13 @@ import type {
   LoginResponse,
   SuspendVendorRequest,
   ReinstateVendorRequest,
+  OrdersQuery,
+  OrdersResponse,
+  OrderItemsResponse,
+  OrdersMetrics,
+  Order,
+  TicketsResponse,
+  TicketMessagesResponse,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -317,6 +324,56 @@ class ApiService {
     );
   }
 
+  // Orders
+  async getOrders(query: OrdersQuery): Promise<OrdersResponse> {
+    // Build the query string from the query object, filtering out undefined values
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+    const queryString = params.toString();
+
+    return this.request<OrdersResponse>(
+      `/backoffice/orders${queryString ? `?${queryString}` : ""}`
+    );
+  }
+
+  async getOrdersSummary(): Promise<ApiResponse<OrdersMetrics>> {
+    return this.request<ApiResponse<OrdersMetrics>>(
+      `/backoffice/orders/summary`
+    );
+  }
+
+  async updateOrderStatus(
+    orderNo: string,
+    status: string
+  ): Promise<ApiResponse<{ message: string; order: Order }>> {
+    return this.request<ApiResponse<{ message: string; order: Order }>>(
+      `/backoffice/orders/status/${orderNo}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }
+    );
+  }
+
+  async getOrderItems(
+    orderId: string
+  ): Promise<ApiResponse<OrderItemsResponse>> {
+    return this.request<ApiResponse<OrderItemsResponse>>(
+      `/backoffice/orders/items/${orderId}`
+    );
+  }
+
+  // async getProductTracking(productId: string) {
+  //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //   return this.request<any>(`/product/${productId}/track-view`, {
+  //     method: "PUT",
+  //   });
+  // }
+
   // Business Categories (using Basic Auth)
   async getBusinessCategories(): Promise<ApiResponse<BusinessCategory[]>> {
     return this.requestWithBasicAuth<ApiResponse<BusinessCategory[]>>(
@@ -419,6 +476,66 @@ class ApiService {
   > {
     return this.requestWithBasicAuth<PaginatedApiResponse<ProductCategory>>(
       `/product/category?page=1&perPage=10000`
+    );
+  }
+
+  // Commission
+  async getCommission(): Promise<ApiResponse<{ commission: number }>> {
+    // TODO: Replace endpoint when backend provides it
+    return this.request<ApiResponse<{ commission: number }>>(
+      `/backoffice/commission`
+    );
+  }
+
+  async updateCommission(data: {
+    commission: number;
+  }): Promise<ApiResponse<{ message: string; commission: number }>> {
+    // TODO: Replace endpoint when backend provides it
+    return this.request<ApiResponse<{ message: string; commission: number }>>(
+      `/backoffice/commission`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // Tickets
+  async getTickets(
+    page = 1,
+    perPage = 10,
+    search?: string
+  ): Promise<ApiResponse<TicketsResponse>> {
+    const params = new URLSearchParams({
+      page: String(page),
+      perPage: String(perPage),
+    });
+    if (search) {
+      params.append("search", search);
+    }
+    return this.request<ApiResponse<TicketsResponse>>(
+      `/ticket/support?${params.toString()}`
+    );
+  }
+
+  async getTicketMessages(
+    ticketId: string
+  ): Promise<ApiResponse<TicketMessagesResponse>> {
+    return this.request<ApiResponse<TicketMessagesResponse>>(
+      `/ticket/get-messages/${ticketId}`
+    );
+  }
+
+  async replyToTicket(
+    ticketId: string,
+    message: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/ticket/reply-message/${ticketId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }
     );
   }
 }

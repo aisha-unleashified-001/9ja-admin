@@ -193,15 +193,15 @@ export function ProductCategories() {
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100">
-                      <Package className="h-5 w-5 text-blue-600" />
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
+                      <Package className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-medium text-lg">{category.categoryName}</h3>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                         <div className="flex items-center gap-1">
                           {/* <Calendar className="h-3 w-3" /> */}
-                          <span>Category count:</span> {category.associatedProducts || 0}
+                          <span>Product count:</span> {category.associatedProducts || 0}
                         </div>
                         {/* {category.updatedAt !== category.createdAt && (
                           <div className="flex items-center gap-1">

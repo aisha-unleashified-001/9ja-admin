@@ -34,7 +34,7 @@ export function VendorSignupDetail() {
   const [signup, setSignup] = useState<VendorSignup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toggling, setToggling] = useState(false);
+  // const [toggling, setToggling] = useState(false);
   const [approving, setApproving] = useState(false);
   const [suspending, setSuspending] = useState(false);
   const [unsuspending, setUnsuspending] = useState(false);
@@ -76,20 +76,20 @@ export function VendorSignupDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorId]);
 
-  const handleToggleStatus = async () => {
-    if (!signup || !vendorId) return;
+  // const handleToggleStatus = async () => {
+  //   if (!signup || !vendorId) return;
 
-    setToggling(true);
-    try {
-      await apiService.toggleVendorStatus(vendorId);
-      await fetchSignup();
-    } catch (error) {
-      console.error("Failed to toggle vendor status:", error);
-      setError("Failed to update vendor status. Please try again.");
-    } finally {
-      setToggling(false);
-    }
-  };
+  //   setToggling(true);
+  //   try {
+  //     await apiService.toggleVendorStatus(vendorId);
+  //     await fetchSignup();
+  //   } catch (error) {
+  //     console.error("Failed to toggle vendor status:", error);
+  //     setError("Failed to update vendor status. Please try again.");
+  //   } finally {
+  //     setToggling(false);
+  //   }
+  // };
 
   const handleApprove = async () => {
     if (!signup || !vendorId) return;
@@ -281,13 +281,13 @@ export function VendorSignupDetail() {
             </Button>
           )}
 
-          <Button
+          {/* <Button
             onClick={handleToggleStatus}
             disabled={toggling}
             variant={signup.isActive === "1" ? "outline" : "default"}
           >
             {toggling ? "Updating..." : statusInfo.actionLabel}
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -426,7 +426,7 @@ export function VendorSignupDetail() {
                 <label className="text-sm font-medium text-muted-foreground">
                   Business Category
                 </label>
-                <p className="text-sm">{signup.businessCategory}</p>
+                <p className="text-sm">{signup.businessCategoryName}</p>
               </div>
             )}
             {signup.businessRegNumber && (
