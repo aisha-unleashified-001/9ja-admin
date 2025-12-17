@@ -19,13 +19,6 @@ import type {
   Order,
   TicketsResponse,
   TicketMessagesResponse,
-  OrdersQuery,
-  OrdersResponse,
-  OrderItemsResponse,
-  OrdersMetrics,
-  Order,
-  TicketsResponse,
-  TicketMessagesResponse,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -487,21 +480,13 @@ class ApiService {
   }
 
   // Commission
-  async getCommission(): Promise<ApiResponse<{ commission: number }>> {
-    // TODO: Replace endpoint when backend provides it
-    return this.request<ApiResponse<{ commission: number }>>(
-      `/backoffice/commission`
-    );
-  }
-
   async updateCommission(data: {
-    commission: number;
-  }): Promise<ApiResponse<{ message: string; commission: number }>> {
-    // TODO: Replace endpoint when backend provides it
-    return this.request<ApiResponse<{ message: string; commission: number }>>(
-      `/backoffice/commission`,
+    platformShare: number;
+  }): Promise<ApiResponse<{ message?: string }>> {
+    return this.request<ApiResponse<{ message?: string }>>(
+      `/backoffice/settings/commission`,
       {
-        method: "PUT",
+        method: "POST",
         body: JSON.stringify(data),
       }
     );

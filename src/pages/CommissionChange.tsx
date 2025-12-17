@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -15,29 +15,7 @@ import toast from "react-hot-toast";
 export function CommissionChange() {
   const [commission, setCommission] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch current commission percentage on mount
-  useEffect(() => {
-    const fetchCurrentCommission = async () => {
-      setFetching(true);
-      try {
-        const response = await apiService.getCommission();
-        if (response.data) {
-          setCommission(response.data.commission.toString());
-        }
-      } catch (err) {
-        console.error("Failed to fetch commission:", err);
-        // Don't show error toast on initial load if endpoint doesn't exist yet
-        // toast.error("Failed to load current commission percentage");
-      } finally {
-        setFetching(false);
-      }
-    };
-
-    fetchCurrentCommission();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +31,7 @@ export function CommissionChange() {
     setLoading(true);
     try {
       const response = await apiService.updateCommission({
-        commission: commissionValue,
+        platformShare: commissionValue,
       });
       toast.success(
         response.data?.message ||
@@ -109,7 +87,7 @@ export function CommissionChange() {
                   onChange={(e) => setCommission(e.target.value)}
                   placeholder="Enter commission percentage (e.g., 10.5)"
                   required
-                  disabled={fetching || loading}
+                  disabled={loading}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Enter a value between 0 and 100 (e.g., 10 for 10%, 12.5 for 12.5%)
@@ -125,7 +103,7 @@ export function CommissionChange() {
               <div className="flex items-center gap-3">
                 <Button
                   type="submit"
-                  disabled={loading || fetching || !commission}
+                  disabled={loading || !commission}
                 >
                   {loading ? "Updating..." : "Update Commission"}
                 </Button>

@@ -621,9 +621,15 @@ export default function OrdersPage() {
 
                             {/* Dropdown */}
                             <div
-                              className="absolute right-0 top-full mt-2 w-36 bg-white
-                 rounded-lg shadow-xl border border-gray-100
-                 py-1 z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 origin-top-right"
+                              className="fixed mt-2 w-36 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+                              style={
+                                statusDropdownPosition
+                                  ? {
+                                      top: statusDropdownPosition.top,
+                                      left: statusDropdownPosition.left,
+                                    }
+                                  : undefined
+                              }
                               onClick={(e) => e.stopPropagation()}
                             >
                               {[
