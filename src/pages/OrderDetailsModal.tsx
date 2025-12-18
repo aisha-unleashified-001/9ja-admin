@@ -16,6 +16,46 @@ interface TimelineItem {
   key: string;
 }
 
+// Function to process timeline and split "Awaiting Pickup/Transit" into two separate items
+function processTimeline(timeline: TimelineItem[]): TimelineItem[] {
+  if (!timeline || !Array.isArray(timeline)) return [];
+  
+  const processed: TimelineItem[] = [];
+  
+  timeline.forEach((item, index) => {
+    const status = item.status || "";
+    // Check if status contains "Awaiting Pickup/Transit" or similar variations
+    // Match patterns like: "Awaiting Pickup/Transit", "awaiting_pickup/transit", etc.
+    const isCombinedStatus = /awaiting.*pickup\s*\/\s*transit/i.test(status);
+    
+    if (isCombinedStatus) {
+      // Split into two separate items
+      const awaitingPickupItem: TimelineItem = {
+        status: "Awaiting Pickup",
+        description: "Order is confirmed and awaiting pickup",
+        timestamp: item.timestamp,
+        current: false, // Only the last split item should be current
+        key: item.key ? `${item.key}-awaiting-pickup` : `awaiting-pickup-${index}`,
+      };
+      
+      const inTransitItem: TimelineItem = {
+        status: "In Transit",
+        description: "Order is in transit",
+        timestamp: item.timestamp, // Use same timestamp or you could modify if needed
+        current: item.current, // The transit item should be current if the combined one was
+        key: item.key ? `${item.key}-in-transit` : `in-transit-${index}`,
+      };
+      
+      processed.push(awaitingPickupItem);
+      processed.push(inTransitItem);
+    } else {
+      processed.push(item);
+    }
+  });
+  
+  return processed;
+}
+
 export default function OrderDetailsModal({
   order: initialOrderData,
   onClose,
@@ -25,7 +65,7 @@ export default function OrderDetailsModal({
     initialOrderData?.orderNo
   );
 
-  const { items, enrichedOrder } = useMemo(() => {
+  const { items, enrichedOrder, processedTimeline } = useMemo(() => {
     // Handle case where fetchedData is an array (from store) or an object with data/items
     let apiData: any = {};
     let itemsList: any[] = [];
@@ -56,10 +96,14 @@ export default function OrderDetailsModal({
       ...apiData,
     };
 
+    // Process timeline to split "Awaiting Pickup/Transit" into two items
+    const originalTimeline = mergedOrder?.orderInfo?.orderTimeline || [];
+    const processed = processTimeline(originalTimeline);
+
     // console.log("Enriched Order Data:", mergedOrder);
     console.log("Items List fecth:", fetchedData);
 
-    return { items: itemsList, enrichedOrder: mergedOrder };
+    return { items: itemsList, enrichedOrder: mergedOrder, processedTimeline: processed };
   }, [fetchedData, initialOrderData]);
 
   if (!initialOrderData) return null;
@@ -184,7 +228,7 @@ export default function OrderDetailsModal({
               Timeline
             </h3>
             <Timeline
-              timeline={enrichedOrder?.orderInfo?.orderTimeline || []}
+              timeline={processedTimeline || []}
             />
           </section>
         </div>
