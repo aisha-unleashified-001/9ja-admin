@@ -25,7 +25,11 @@ interface SidebarProps {
 
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Vendors", href: "/dashboard/vendor-signups", icon: UserPlus },
+  {
+    name: "Vendors SignUp",
+    href: "/dashboard/vendor-signups",
+    icon: UserPlus,
+  },
   {
     name: "Business Categories",
     href: "/dashboard/business-categories",
@@ -39,7 +43,11 @@ const navigation = [
   { name: "Orders", href: "/dashboard/orders", icon: Box },
   { name: "Buyer Messages", href: "/dashboard/buyer-messages", icon: Mail },
   { name: "Vendor Messages", href: "/dashboard/vendor-messages", icon: Store },
-  { name: "Commission Change", href: "/dashboard/commission-change", icon: Percent },
+  {
+    name: "Commission Change",
+    href: "/dashboard/commission-change",
+    icon: Percent,
+  },
   { name: "Waitlist", href: "/dashboard/waitlist", icon: Users },
   { name: "Contacts", href: "/dashboard/contacts", icon: MessageSquare },
 ];

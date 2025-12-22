@@ -491,6 +491,11 @@ class ApiService {
       }
     );
   }
+  async getCommission(): Promise<ApiResponse<string | number>> {
+    return this.requestWithBasicAuth<ApiResponse<string | number>>(
+      `/backoffice/settings`
+    );
+  }
 
   // Tickets
   async getTickets(

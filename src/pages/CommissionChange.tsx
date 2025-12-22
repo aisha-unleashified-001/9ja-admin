@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,12 +8,14 @@ import {
 } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Percent } from "lucide-react";
+import { ArrowRightLeft, Percent } from "lucide-react";
 import { apiService } from "../services/api";
 import toast from "react-hot-toast";
 
 export function CommissionChange() {
   const [commission, setCommission] = useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [currenCommission, setCurrentCommission] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +25,11 @@ export function CommissionChange() {
 
     // Validate input
     const commissionValue = parseFloat(commission);
-    if (isNaN(commissionValue) || commissionValue < 0 || commissionValue > 100) {
+    if (
+      isNaN(commissionValue) ||
+      commissionValue < 0 ||
+      commissionValue > 100
+    ) {
       setError("Please enter a valid commission percentage between 0 and 100");
       return;
     }
@@ -50,6 +56,20 @@ export function CommissionChange() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const fetchCommission = async () => {
+    try {
+      const response = await apiService.getCommission();
+      setCurrentCommission(response.data?.toString() || "");
+    } catch (err) {
+      console.error("Failed to fetch current commission:", err);
+    }
+  };
+
+  useEffect(() => {
+    // fetchCommission();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -64,7 +84,8 @@ export function CommissionChange() {
               Update Commission Percentage
             </CardTitle>
             <CardDescription>
-              Update the commission percentage (%) that 9jaCart charges from vendors
+              Update the commission percentage (%) that 9jaCart charges from
+              vendors
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -77,20 +98,49 @@ export function CommissionChange() {
                   Commission Percentage (%){" "}
                   <span className="text-destructive">*</span>
                 </label>
-                <Input
-                  id="commission"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={commission}
-                  onChange={(e) => setCommission(e.target.value)}
-                  placeholder="Enter commission percentage (e.g., 10.5)"
-                  required
-                  disabled={loading}
-                />
+                <div className="flex items-center justify-around gap-2 my-6">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold">
+                      Current Percentage
+                    </span>
+                    <Input
+                      id="commission"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={commission}
+                      onChange={(e) => setCommission(e.target.value)}
+                      placeholder="Enter commission percentage (e.g., 10.5)"
+                      required
+                      disabled={true}
+                    />
+                  </div>
+                  <ArrowRightLeft
+                    className="font-light place-items-center mt-6"
+                    size={20}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold">
+                      New Percentage
+                    </span>
+                    <Input
+                      id="commission"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={commission}
+                      onChange={(e) => setCommission(e.target.value)}
+                      placeholder="Enter commission percentage (e.g., 10.5)"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter a value between 0 and 100 (e.g., 10 for 10%, 12.5 for 12.5%)
+                  Enter a value between 0 and 100 (e.g., 10 for 10%, 12.5 for
+                  12.5%)
                 </p>
               </div>
 
@@ -101,10 +151,7 @@ export function CommissionChange() {
               )}
 
               <div className="flex items-center gap-3">
-                <Button
-                  type="submit"
-                  disabled={loading || !commission}
-                >
+                <Button type="submit" disabled={loading || !commission}>
                   {loading ? "Updating..." : "Update Commission"}
                 </Button>
               </div>
@@ -115,4 +162,3 @@ export function CommissionChange() {
     </div>
   );
 }
-

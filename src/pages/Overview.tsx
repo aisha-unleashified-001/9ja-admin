@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { Users, MessageSquare, TrendingUp, Calendar } from 'lucide-react';
-import { apiService } from '../services/api';
-import type { Contact, WaitlistEntry } from '../types/api';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/Card";
+import {
+  Users,
+  MessageSquare,
+  BoxIcon,
+  MessageCircleMore,
+} from "lucide-react";
+import { apiService } from "../services/api";
+import type { Contact, WaitlistEntry } from "../types/api";
 
 export function Overview() {
   const [stats, setStats] = useState({
@@ -29,7 +40,7 @@ export function Overview() {
           recentWaitlist: waitlistRes.data,
         });
       } catch (error) {
-        console.error('Failed to fetch overview data:', error);
+        console.error("Failed to fetch overview data:", error);
       } finally {
         setLoading(false);
       }
@@ -59,53 +70,64 @@ export function Overview() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Overview</h1>
-      
+
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Contacts</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Vendor count
+                </p>
                 <p className="text-2xl font-bold">{stats.totalContacts}</p>
-              </div>
-              <MessageSquare className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Waitlist Entries</p>
-                <p className="text-2xl font-bold">{stats.totalWaitlist}</p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Growth Rate</p>
-                <p className="text-2xl font-bold">+12%</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Completed order
+                </p>
+                <p className="text-2xl font-bold">{stats.totalWaitlist}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-muted-foreground" />
+              <BoxIcon className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold">{new Date().toLocaleDateString('en-US', { month: 'short' })}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Message count
+                </p>
+                <p className="text-2xl font-bold">10</p>
               </div>
-              <Calendar className="h-8 w-8 text-muted-foreground" />
+              <MessageSquare className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Contact message count
+                </p>
+                <p className="text-2xl font-bold">
+                  {/* {new Date().toLocaleDateString("en-US", { month: "short" })} */}
+                  12
+                </p>
+              </div>
+              <MessageCircleMore className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -121,10 +143,15 @@ export function Overview() {
           <CardContent>
             <div className="space-y-4">
               {stats.recentContacts.map((contact) => (
-                <div key={contact.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div
+                  key={contact.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
                   <div>
                     <p className="font-medium">{contact.fullName}</p>
-                    <p className="text-sm text-muted-foreground">{contact.subject}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {contact.subject}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">
@@ -133,8 +160,8 @@ export function Overview() {
                   </div>
                 </div>
               ))}
-              <Link 
-                to="/dashboard/contacts" 
+              <Link
+                to="/dashboard/contacts"
                 className="block text-center text-sm text-primary hover:underline mt-4"
               >
                 View all contacts
@@ -151,7 +178,10 @@ export function Overview() {
           <CardContent>
             <div className="space-y-4">
               {stats.recentWaitlist.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
                   <div>
                     <p className="font-medium">
                       {entry.business_name || entry.businessName}
@@ -162,13 +192,15 @@ export function Overview() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">
-                      {new Date(entry.created_at || entry.createdAt || '').toLocaleDateString()}
+                      {new Date(
+                        entry.created_at || entry.createdAt || ""
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               ))}
-              <Link 
-                to="/dashboard/waitlist" 
+              <Link
+                to="/dashboard/waitlist"
                 className="block text-center text-sm text-primary hover:underline mt-4"
               >
                 View all waitlist entries

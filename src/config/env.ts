@@ -5,6 +5,11 @@ export const config = {
     (import.meta.env.DEV ? "http://api.9jacart.ng" : "https://api.9jacart.ng"),
   IS_DEVELOPMENT: import.meta.env.DEV,
   IS_PRODUCTION: import.meta.env.PROD,
+  API_DOCUMENTS_URL:
+    import.meta.env.VITE_API_DOCUMENTS_URL ||
+    (import.meta.env.DEV
+      ? "http://api.9jacart.ng/documents/"
+      : "https://api.9jacart.ng/documents/"),
 };
 
 // In development, HTTP is used by default to avoid SSL certificate issues

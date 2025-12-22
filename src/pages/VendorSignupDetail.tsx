@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { apiService } from "../services/api";
 import type { VendorSignup } from "../types/api";
+import { config } from "@/config/env";
 
 export function VendorSignupDetail() {
   const { id: vendorId } = useParams<{ id: string }>();
@@ -579,7 +580,9 @@ export function VendorSignupDetail() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-3xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Document Viewer</h2>
+              <h2 className="text-lg font-semibold">
+                {documentUrl.split(config.API_DOCUMENTS_URL).pop()}
+              </h2>
               <Button
                 variant="outline"
                 size="sm"
