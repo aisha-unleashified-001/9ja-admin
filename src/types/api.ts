@@ -296,7 +296,6 @@ export interface LoginResponse {
   token: string;
 }
 
-
 //order
 export type OrderSort = "recent" | "oldest";
 
@@ -394,7 +393,6 @@ export interface OrderItemsResponse {
   itemsByVendor?: VendorItems[];
 }
 
-
 // types/order.ts
 
 export interface OrderTimelineItem {
@@ -404,8 +402,6 @@ export interface OrderTimelineItem {
   current: boolean;
   key: string;
 }
-
-
 
 export interface VendorItems {
   vendorName: string;
@@ -445,4 +441,55 @@ export interface OrderDetailsResponse {
     calculatedTotal: number;
   };
   itemsByVendor: VendorItems[];
+}
+
+export interface OverviewStats {
+  completedOrders?: number;
+  totalOrders?: number;
+  totalContacts?: number;
+  totalVendors?: number;
+  adminUnreadMessages?: number;
+  adminMessagesCount?: number;
+  vendorUnreadMesagesCount?: number;
+  buyerUnreadMessagesCount?: number;
+  vendorMessagesCount?: number;
+  buyerMessagesCount?: number;
+}
+
+export interface NotificationItem {
+  notificationId: string;
+  userId: string;
+  title: string;
+  message: string;
+  isRead: string; // "0" or "1" based on your JSON
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationResponse {
+  status: number;
+  error: boolean;
+  message: string;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  pagination: {
+    currentPage: number;
+    perPage: number;
+    totalPages: number;
+    totalItems: number;
+  };
+}
+
+export interface NotificationCounts {
+  vendors: number;
+  buyers: number;
+  admin: number;
+}
+
+export interface CategoryCount {
+  label: string;
+  count: number;
+  route: string;
+  type: "vendor" | "buyer" | "admin";
 }

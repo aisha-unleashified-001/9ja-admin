@@ -19,6 +19,8 @@ import type {
   Order,
   TicketsResponse,
   TicketMessagesResponse,
+  NotificationResponse,
+  OverviewStats,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -216,6 +218,13 @@ class ApiService {
   ): Promise<PaginatedApiResponse<Contact>> {
     return this.request<PaginatedApiResponse<Contact>>(
       `/backoffice/vendors/contacts?page=${page}&perPage=${perPage}`
+    );
+  }
+
+  // overview stats
+  async getOverviewStats(): Promise<PaginatedApiResponse<OverviewStats>> {
+    return this.request<PaginatedApiResponse<OverviewStats>>(
+      `/backoffice/overview`
     );
   }
 
@@ -491,10 +500,22 @@ class ApiService {
       }
     );
   }
-  async getCommission(): Promise<ApiResponse<string | number>> {
-    return this.requestWithBasicAuth<ApiResponse<string | number>>(
-      `/backoffice/settings`
-    );
+  async getCommission(): Promise<
+    ApiResponse<{
+      id: string;
+      platformCommission: string;
+      createdAt: string;
+      updatedAt: string;
+    }>
+  > {
+    return this.request<
+      ApiResponse<{
+        id: string;
+        platformCommission: string;
+        createdAt: string;
+        updatedAt: string;
+      }>
+    >(`/backoffice/settings`);
   }
 
   // Tickets
@@ -532,6 +553,30 @@ class ApiService {
       {
         method: "POST",
         body: JSON.stringify({ message }),
+      }
+    );
+  }
+
+  async getNotifications(query?: {
+    page?: number;
+    perPage?: number;
+  }): Promise<ApiResponse<NotificationResponse>> {
+    const params = new URLSearchParams({
+      page: String(query?.page || 1),
+      perPage: String(query?.perPage || 10),
+    });
+    return this.request<ApiResponse<NotificationResponse>>(
+      `/notification?${params.toString()}`
+    );
+  }
+
+  async markNotificationAsRead(
+    notificationId: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/notification/${notificationId}/read`,
+      {
+        method: "PUT",
       }
     );
   }

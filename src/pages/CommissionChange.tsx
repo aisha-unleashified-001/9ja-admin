@@ -14,7 +14,6 @@ import toast from "react-hot-toast";
 
 export function CommissionChange() {
   const [commission, setCommission] = useState<string>("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currenCommission, setCurrentCommission] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,18 +55,17 @@ export function CommissionChange() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchCommission = async () => {
     try {
       const response = await apiService.getCommission();
-      setCurrentCommission(response.data?.toString() || "");
+      setCurrentCommission(response.data?.platformCommission || "");
     } catch (err) {
       console.error("Failed to fetch current commission:", err);
     }
   };
 
   useEffect(() => {
-    // fetchCommission();
+    fetchCommission();
   }, []);
 
   return (
@@ -109,8 +107,8 @@ export function CommissionChange() {
                       min="0"
                       max="100"
                       step="0.01"
-                      value={commission}
-                      onChange={(e) => setCommission(e.target.value)}
+                      value={currenCommission}
+                      // onChange={(e) => setCommission(e.target.value)}
                       placeholder="Enter commission percentage (e.g., 10.5)"
                       required
                       disabled={true}

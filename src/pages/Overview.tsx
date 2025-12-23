@@ -7,14 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/Card";
-import {
-  Users,
-  MessageSquare,
-  BoxIcon,
-  MessageCircleMore,
-} from "lucide-react";
+import { Users, MessageSquare, BoxIcon, MessageCircleMore } from "lucide-react";
 import { apiService } from "../services/api";
-import type { Contact, WaitlistEntry } from "../types/api";
+import type { Contact, OverviewStats, WaitlistEntry } from "../types/api";
+import { NotificationBell } from "./NotificationBell";
 
 export function Overview() {
   const [stats, setStats] = useState({
@@ -23,6 +19,13 @@ export function Overview() {
     recentContacts: [] as Contact[],
     recentWaitlist: [] as WaitlistEntry[],
   });
+  const [statCard, setStatCard] = useState<OverviewStats>({
+    totalVendors: 0,
+    completedOrders: 0,
+    adminMessagesCount: 0,
+    vendorMessagesCount: 0,
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export function Overview() {
           apiService.getContacts(1, 5),
           apiService.getWaitlist(1, 5),
         ]);
+        const cardResponse = await apiService.getOverviewStats();
 
         setStats({
           totalContacts: contactsRes.pagination.totalItems,
@@ -39,6 +43,7 @@ export function Overview() {
           recentContacts: contactsRes.data,
           recentWaitlist: waitlistRes.data,
         });
+        setStatCard(cardResponse.data);
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
@@ -69,7 +74,12 @@ export function Overview() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Overview</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Overview</h1>
+
+        {/* Notification Bell Component */}
+        <NotificationBell />
+      </div>
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -80,7 +90,7 @@ export function Overview() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Vendor count
                 </p>
-                <p className="text-2xl font-bold">{stats.totalContacts}</p>
+                <p className="text-2xl font-bold">{statCard.totalVendors}</p>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -94,7 +104,7 @@ export function Overview() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Completed order
                 </p>
-                <p className="text-2xl font-bold">{stats.totalWaitlist}</p>
+                <p className="text-2xl font-bold">{statCard.completedOrders}</p>
               </div>
               <BoxIcon className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -108,7 +118,7 @@ export function Overview() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Message count
                 </p>
-                <p className="text-2xl font-bold">10</p>
+                <p className="text-2xl font-bold">{statCard.adminMessagesCount}</p>
               </div>
               <MessageSquare className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -124,7 +134,7 @@ export function Overview() {
                 </p>
                 <p className="text-2xl font-bold">
                   {/* {new Date().toLocaleDateString("en-US", { month: "short" })} */}
-                  12
+                  {statCard.buyerMessagesCount}
                 </p>
               </div>
               <MessageCircleMore className="h-8 w-8 text-muted-foreground" />
