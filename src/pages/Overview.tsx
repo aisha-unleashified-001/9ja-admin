@@ -43,7 +43,12 @@ export function Overview() {
           recentContacts: contactsRes.data,
           recentWaitlist: waitlistRes.data,
         });
-        setStatCard(cardResponse.data);
+        setStatCard(cardResponse.data[0] || {
+          totalVendors: 0,
+          completedOrders: 0,
+          adminMessagesCount: 0,
+          vendorMessagesCount: 0,
+        });
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
