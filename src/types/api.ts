@@ -235,6 +235,7 @@ export interface VendorSignup {
   approvedAt: string | null;
   isSuspended: string; // "0" or "1"
   suspendedAt: string | null;
+  isPending?: boolean | string; // Pending approval status
   createdAt: string;
   updatedAt: string;
   businessCategoryName: string | null;
@@ -485,6 +486,7 @@ export interface NotificationCounts {
   vendors: number;
   buyers: number;
   admin: number;
+  pendingSignups: number;
 }
 
 export interface CategoryCount {

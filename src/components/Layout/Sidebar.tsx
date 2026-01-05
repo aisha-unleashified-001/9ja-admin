@@ -30,7 +30,7 @@ const navigation = [
     name: "Vendors SignUp",
     href: "/dashboard/vendor-signups",
     icon: UserPlus,
-    key: "waitlist",
+    key: "pendingSignups",
   },
   {
     name: "Business Categories",
@@ -81,6 +81,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (!key) return 0;
     if (key === "vendors") return counts.vendors;
     if (key === "buyers") return counts.buyers;
+    if (key === "pendingSignups") return counts.pendingSignups;
     return 0;
   };
 

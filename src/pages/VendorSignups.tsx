@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -29,13 +29,14 @@ type StatusFilterKey = "active" | "approved" | "pending" | "suspended";
 type StatusFilters = Record<StatusFilterKey, boolean>;
 
 export function VendorSignups() {
+  const [searchParams] = useSearchParams();
   const [signups, setSignups] = useState<VendorSignup[]>([]);
   const [filteredSignups, setFilteredSignups] = useState<VendorSignup[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilters, setStatusFilters] = useState<StatusFilters>({
     active: false,
     approved: false,
-    pending: false,
+    pending: searchParams.get("filter") === "pending",
     suspended: false,
   });
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -81,6 +82,18 @@ export function VendorSignups() {
   useEffect(() => {
     fetchSignups();
   }, []);
+
+  // Sync filter state with URL parameter
+  useEffect(() => {
+    const filterParam = searchParams.get("filter");
+    if (filterParam === "pending") {
+      setStatusFilters((prev) => ({
+        ...prev,
+        pending: true,
+      }));
+      setShowFilterPanel(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const query = searchQuery.trim().toLowerCase();

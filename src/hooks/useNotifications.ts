@@ -11,25 +11,68 @@ export function useNotifications() {
     vendors: 0,
     buyers: 0,
     admin: 0,
+    pendingSignups: 0,
   });
   const [categoryCounts, setCategoryCounts] = useState<CategoryCount[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchPendingSignups = useCallback(async () => {
+    try {
+      const response = await apiService.getAllVendorSignups();
+      if (response && response.data && Array.isArray(response.data)) {
+        // Count vendors with pending approval status
+        // First check isPending attribute if it exists, otherwise fall back to isApproved !== "1"
+        const pendingCount = response.data.filter((signup) => {
+          // Check isPending attribute if it exists
+          if (signup.isPending !== undefined && signup.isPending !== null) {
+            const isPending = signup.isPending;
+            return (
+              isPending === true ||
+              isPending === "1" ||
+              isPending === "true" ||
+              String(isPending).toLowerCase() === "true"
+            );
+          }
+          // Fallback: check if not approved (isApproved !== "1")
+          return signup.isApproved !== "1";
+        }).length;
+        console.log("Pending vendor signups count:", pendingCount);
+        return pendingCount;
+      }
+      console.warn("Vendor signups response structure unexpected:", response);
+      return 0;
+    } catch (error) {
+      console.error("Failed to fetch pending vendor signups:", error);
+      return 0;
+    }
+  }, []);
+
   const fetchNotifications = useCallback(async () => {
     try {
-      const response = await apiService.getNotifications();
+      // Fetch both notifications and pending signups in parallel
+      const [notificationsResponse, pendingSignupsCount] = await Promise.all([
+        apiService.getNotifications().catch((err) => {
+          console.error("Failed to fetch notifications:", err);
+          return null;
+        }),
+        fetchPendingSignups(),
+      ]);
 
-      if (response && response.data) {
-        const data = response.data;
+      let vendorCount = 0;
+      let buyerCount = 0;
+      let adminCount = 0;
+
+      if (notificationsResponse && notificationsResponse.data) {
+        const data = notificationsResponse.data;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const explicitCounts = data as any;
         const noteList = data.notifications || [];
         setNotifications(noteList);
 
-        let vendorCount = explicitCounts.vendorUnreadMesagesCount || 0;
-        let buyerCount = explicitCounts.buyerUnreadMessagesCount || 0;
-        let adminCount = explicitCounts.adminUnreadMessages || 0;
+        vendorCount = explicitCounts.vendorUnreadMesagesCount || 0;
+        buyerCount = explicitCounts.buyerUnreadMessagesCount || 0;
+        adminCount = explicitCounts.adminUnreadMessages || 0;
 
         // Fallback calculation if explicit counts are missing
         if (vendorCount === 0 && buyerCount === 0 && noteList.length > 0) {
@@ -49,45 +92,47 @@ export function useNotifications() {
             }
           });
         }
-
-        const newCounts = {
-          vendors: vendorCount,
-          buyers: buyerCount,
-          admin: adminCount,
-        };
-
-        setCounts(newCounts);
-
-        const categories: CategoryCount[] = [
-          {
-            label: "Vendor Messages",
-            count: newCounts.vendors,
-            route: "/dashboard/vendor-messages",
-            type: "vendor",
-          },
-          {
-            label: "Buyer Messages",
-            count: newCounts.buyers,
-            route: "/dashboard/buyer-messages",
-            type: "buyer",
-          },
-          {
-            label: "System Messages",
-            count: newCounts.admin,
-            route: "/dashboard/messages",
-            type: "admin",
-          },
-        ];
-
-        const filteredCategories = categories.filter((c) => c.count > 0);
-        setCategoryCounts(filteredCategories);
       }
+
+      // Always update counts, including pendingSignups
+      const newCounts = {
+        vendors: vendorCount,
+        buyers: buyerCount,
+        admin: adminCount,
+        pendingSignups: pendingSignupsCount,
+      };
+
+      setCounts(newCounts);
+
+      const categories: CategoryCount[] = [
+        {
+          label: "Vendor Messages",
+          count: newCounts.vendors,
+          route: "/dashboard/vendor-messages",
+          type: "vendor",
+        },
+        {
+          label: "Buyer Messages",
+          count: newCounts.buyers,
+          route: "/dashboard/buyer-messages",
+          type: "buyer",
+        },
+        {
+          label: "System Messages",
+          count: newCounts.admin,
+          route: "/dashboard/messages",
+          type: "admin",
+        },
+      ];
+
+      const filteredCategories = categories.filter((c) => c.count > 0);
+      setCategoryCounts(filteredCategories);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchPendingSignups]);
 
   useEffect(() => {
     fetchNotifications();

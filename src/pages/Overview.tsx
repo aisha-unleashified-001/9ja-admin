@@ -7,10 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/Card";
-import { Users, MessageSquare, BoxIcon, MessageCircleMore } from "lucide-react";
+import { Users, MessageSquare, BoxIcon, MessageCircleMore, AlertCircle } from "lucide-react";
 import { apiService } from "../services/api";
 import type { Contact, OverviewStats, WaitlistEntry } from "../types/api";
 import { NotificationBell } from "./NotificationBell";
+import { useNotifications } from "../hooks/useNotifications";
 
 export function Overview() {
   const [stats, setStats] = useState({
@@ -27,6 +28,7 @@ export function Overview() {
   });
 
   const [loading, setLoading] = useState(true);
+  const { counts } = useNotifications();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,6 +149,26 @@ export function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Signups Banner */}
+      {counts.pendingSignups > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <p className="text-sm font-medium text-red-800">
+                You have {counts.pendingSignups} pending user sign-up{counts.pendingSignups !== 1 ? "s" : ""} to approve.
+              </p>
+              <Link
+                to="/dashboard/vendor-signups?filter=pending"
+                className="ml-auto text-sm font-medium text-red-700 hover:text-red-900 underline"
+              >
+                Review now
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <div className="grid gap-6 md:grid-cols-2">
