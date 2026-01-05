@@ -47,6 +47,7 @@ export function VendorSignupDetail() {
   const [reinstatementNotes, setReinstatementNotes] = useState("");
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState<string>("");
 
   const fetchSignup = async () => {
     if (!vendorId) return;
@@ -484,6 +485,7 @@ export function VendorSignupDetail() {
                       size="sm"
                       onClick={() => {
                         setDocumentUrl(signup.idDocument!);
+                        setDocumentName("ID Document");
                         setShowDocumentModal(true);
                       }}
                       className="w-full justify-start"
@@ -510,6 +512,7 @@ export function VendorSignupDetail() {
                       size="sm"
                       onClick={() => {
                         setDocumentUrl(signup.businessRegCertificate!);
+                        setDocumentName("Business Registration Certificate");
                         setShowDocumentModal(true);
                       }}
                       className="w-full justify-start"
@@ -581,12 +584,15 @@ export function VendorSignupDetail() {
           <Card className="w-full max-w-3xl h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">
-                {documentUrl.split(config.API_DOCUMENTS_URL).pop()}
+                {documentName || documentUrl.split(config.API_DOCUMENTS_URL).pop()}
               </h2>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowDocumentModal(false)}
+                onClick={() => {
+                  setShowDocumentModal(false);
+                  setDocumentName("");
+                }}
               >
                 Close
               </Button>

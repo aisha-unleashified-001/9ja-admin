@@ -43,7 +43,7 @@ export function Overview() {
           recentContacts: contactsRes.data,
           recentWaitlist: waitlistRes.data,
         });
-        setStatCard(cardResponse.data[0] || {
+        setStatCard(cardResponse.data || {
           totalVendors: 0,
           completedOrders: 0,
           adminMessagesCount: 0,

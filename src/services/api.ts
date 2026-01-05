@@ -222,8 +222,8 @@ class ApiService {
   }
 
   // overview stats
-  async getOverviewStats(): Promise<PaginatedApiResponse<OverviewStats>> {
-    return this.request<PaginatedApiResponse<OverviewStats>>(
+  async getOverviewStats(): Promise<ApiResponse<OverviewStats>> {
+    return this.request<ApiResponse<OverviewStats>>(
       `/backoffice/overview`
     );
   }
