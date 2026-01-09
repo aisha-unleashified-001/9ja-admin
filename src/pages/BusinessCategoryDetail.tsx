@@ -213,9 +213,9 @@ export function BusinessCategoryDetail() {
                     </Button>
 
                     <Button
-                      variant="destructive"
                       size="sm"
                       onClick={handleDelete}
+                      className="bg-red-800 hover:bg-red-900 text-white"
                     >
                       <X className="h-4 w-4 mr-2" />
                       Delete
@@ -374,8 +374,7 @@ export function BusinessCategoryDetail() {
                       Edit Category
                     </Button>
                     <Button
-                      variant="destructive"
-                      className="w-full"
+                      className="w-full bg-red-800 hover:bg-red-900 text-white"
                       onClick={handleDelete}
                     >
                       <X className="h-4 w-4 mr-2" />

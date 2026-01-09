@@ -171,7 +171,8 @@ export function VendorSignupDetail() {
       : {
           label: "Inactive",
           icon: XCircle,
-          className: "text-red-600 bg-red-50 border-red-200",
+          // Using same colors as Inactive badge on Vendor Signups list page
+          className: "bg-red-100 text-red-800 border-red-200",
           actionLabel: "Activate Vendor",
         };
   };
@@ -265,7 +266,7 @@ export function VendorSignupDetail() {
             <Button
               onClick={() => setShowSuspendModal(true)}
               disabled={suspending}
-              variant="destructive"
+              className="bg-red-800 hover:bg-red-900 text-white"
             >
               <Ban className="h-4 w-4 mr-2" />
               Suspend Vendor
@@ -298,7 +299,7 @@ export function VendorSignupDetail() {
         <Card className={`border-2 ${statusInfo.className}`}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <StatusIcon className="h-5 w-5" />
+              <StatusIcon className={`h-5 w-5 ${signup.isActive === "1" ? "text-green-600" : "text-red-800"}`} />
               <span className="font-medium">Status: {statusInfo.label}</span>
             </div>
           </CardContent>
@@ -331,7 +332,7 @@ export function VendorSignupDetail() {
         <Card
           className={`border-2 ${
             signup.isSuspended === "1"
-              ? "text-red-600 bg-red-50 border-red-200"
+              ? "text-red-600 bg-red-50 border-red-200" // Using red-600 to match banner red color
               : "text-gray-600 bg-gray-50 border-gray-200"
           }`}
         >
@@ -670,8 +671,7 @@ export function VendorSignupDetail() {
                 <Button
                   onClick={handleSuspend}
                   disabled={suspending || !suspensionReason.trim()}
-                  variant="destructive"
-                  className="flex-1"
+                  className="flex-1 bg-red-800 hover:bg-red-900 text-white"
                 >
                   {suspending ? "Suspending..." : "Suspend Vendor"}
                 </Button>

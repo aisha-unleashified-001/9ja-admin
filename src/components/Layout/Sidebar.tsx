@@ -143,7 +143,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 </div>
 
                 {unreadCount > 0 && (
-                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-800 px-1.5 text-xs font-bold text-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

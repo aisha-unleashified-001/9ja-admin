@@ -254,7 +254,7 @@ export function WaitlistDetail() {
                 {getSpecialHandling() === '1' ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-500" />
+                  <XCircle className="h-4 w-4 text-red-600" />
                 )}
                 <p className="font-medium">{getSpecialHandling() === '1' ? 'Yes' : 'No'}</p>
               </div>
@@ -276,7 +276,7 @@ export function WaitlistDetail() {
                 {getOnlinePresence() === '1' ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-500" />
+                  <XCircle className="h-4 w-4 text-red-600" />
                 )}
                 <p className="font-medium">{getOnlinePresence() === '1' ? 'Yes' : 'No'}</p>
               </div>
@@ -291,7 +291,7 @@ export function WaitlistDetail() {
                 {getReceiveNotification() === '1' ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-red-500" />
+                  <XCircle className="h-4 w-4 text-red-600" />
                 )}
                 <p className="font-medium">{getReceiveNotification() === '1' ? 'Yes' : 'No'}</p>
               </div>

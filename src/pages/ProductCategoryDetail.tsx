@@ -431,8 +431,7 @@ export function ProductCategoryDetail() {
                     </Button>
 
                     <Button
-                      variant="destructive"
-                      className="w-full"
+                      className="w-full bg-red-800 hover:bg-red-900 text-white"
                       onClick={handleDelete}
                     >
                       <X className="h-4 w-4 mr-2" />
@@ -461,8 +460,7 @@ export function ProductCategoryDetail() {
             <CardContent>
               <div className="space-y-2">
                 <Button
-                  variant="destructive"
-                  className="w-full"
+                  className="w-full bg-red-800 hover:bg-red-900 text-white"
                   onClick={async () => {
                     // const confirmed = window.confirm(
                     //   "Are you sure you want to delete this category? This cannot be undone."
