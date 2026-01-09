@@ -541,7 +541,7 @@ export function VendorSignupDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">
-                  Created At
+                  Registered on
                 </label>
                 <p className="text-sm">
                   {new Date(signup.createdAt).toLocaleString()}

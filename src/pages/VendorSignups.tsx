@@ -426,7 +426,7 @@ export function VendorSignups() {
 
                       <div className="hidden md:block text-right">
                         <p className="text-sm text-muted-foreground">
-                          Applied on
+                          Registered on
                         </p>
                         <p className="text-sm font-medium">
                           {new Date(signup.createdAt).toLocaleDateString()}
