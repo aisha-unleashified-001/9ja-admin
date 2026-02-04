@@ -13,6 +13,7 @@ import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import type { VendorMessage } from "../types/api";
 import { apiService } from "../services/api";
 import toast from "react-hot-toast";
+import { useNotifications } from "../hooks/useNotifications";
 
 export function VendorMessages() {
   const [vendorMessages, setVendorMessages] = useState<VendorMessage[]>([]);
@@ -26,6 +27,9 @@ export function VendorMessages() {
     totalPages: 1,
     totalItems: 0,
   });
+  
+  // Use notifications hook to mark vendor messages as read
+  const { markAsRead } = useNotifications();
 
   const fetchVendorMessages = async (page = 1, search = "") => {
     setLoading(true);
@@ -127,6 +131,11 @@ export function VendorMessages() {
   useEffect(() => {
     fetchVendorMessages(currentPage, searchQuery);
   }, [currentPage]);
+
+  // Mark vendor notifications as read when visiting this page
+  useEffect(() => {
+    markAsRead("vendor");
+  }, [markAsRead]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

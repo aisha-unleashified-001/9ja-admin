@@ -13,6 +13,7 @@ import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import type { BuyerMessage } from "../types/api";
 import { apiService } from "../services/api";
 import toast from "react-hot-toast";
+import { useNotifications } from "../hooks/useNotifications";
 
 export function BuyerMessages() {
   const [buyerMessages, setBuyerMessages] = useState<BuyerMessage[]>([]);
@@ -26,6 +27,9 @@ export function BuyerMessages() {
     totalPages: 1,
     totalItems: 0,
   });
+  
+  // Use notifications hook to mark buyer messages as read
+  const { markAsRead } = useNotifications();
 
   const fetchBuyerMessages = async (page = 1, search = "") => {
     setLoading(true);
@@ -128,6 +132,11 @@ export function BuyerMessages() {
   useEffect(() => {
     fetchBuyerMessages(currentPage, searchQuery);
   }, [currentPage]);
+
+  // Mark buyer notifications as read when visiting this page
+  useEffect(() => {
+    markAsRead("buyer");
+  }, [markAsRead]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

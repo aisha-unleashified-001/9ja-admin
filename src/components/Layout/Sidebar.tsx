@@ -81,7 +81,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     if (!key) return 0;
     if (key === "vendors") return counts.vendors;
     if (key === "buyers") return counts.buyers;
-    if (key === "pendingSignups") return counts.pendingSignups;
+    if (key === "pendingSignups") {
+      // Only show badge if there are new pending signups since last visit
+      const lastViewedCount = parseInt(localStorage.getItem("lastViewedPendingSignupsCount") || "0", 10);
+      const newPendingCount = counts.pendingSignups - lastViewedCount;
+      return newPendingCount > 0 ? newPendingCount : 0;
+    }
     return 0;
   };
 

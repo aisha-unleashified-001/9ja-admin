@@ -83,6 +83,29 @@ export function VendorSignups() {
     fetchSignups();
   }, []);
 
+  // Mark pending signups as viewed when visiting this page
+  useEffect(() => {
+    if (!loading && signups.length > 0) {
+      const pendingCount = signups.filter((signup) => {
+        // Check isPending attribute if it exists
+        if (signup.isPending !== undefined && signup.isPending !== null) {
+          const isPending = signup.isPending;
+          return (
+            isPending === true ||
+            isPending === "1" ||
+            isPending === "true" ||
+            String(isPending).toLowerCase() === "true"
+          );
+        }
+        // Fallback: check if not approved (isApproved !== "1")
+        return signup.isApproved !== "1";
+      }).length;
+      
+      // Store the current pending count as "viewed"
+      localStorage.setItem("lastViewedPendingSignupsCount", String(pendingCount));
+    }
+  }, [loading, signups]);
+
   // Sync filter state with URL parameter
   useEffect(() => {
     const filterParam = searchParams.get("filter");
