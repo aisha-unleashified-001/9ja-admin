@@ -60,8 +60,8 @@
   --accent-foreground: oklch(0.18 0.06 142); /* Dark green on accent */
   --destructive: oklch(0.577 0.245 27.325); /* Red-600 (#dc2626) - matches banner red color */
   --destructive-foreground: oklch(1 0 0); /* White text on destructive */
-  --border: oklch(0.85 0.01 142); /* More visible green-tinted border */
-  --input: oklch(0.98 0.002 142); /* Very light input background */
+  --border: oklch(0.75 0.02 142); /* More visible green-tinted border */
+  --input: oklch(0.75 0.02 142); /* More visible input border */
   --ring: oklch(0.28 0.08 142); /* Primary color for focus rings */
   --chart-1: oklch(0.35 0.12 142); /* Green chart color */
   --chart-2: oklch(0.25 0.06 200); /* Blue-gray chart color */
