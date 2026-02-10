@@ -13,6 +13,7 @@ import {
   Mail,
   Store,
   Percent,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/Button";
@@ -31,6 +32,11 @@ const navigation = [
     href: "/dashboard/vendor-signups",
     icon: UserPlus,
     key: "pendingSignups",
+  },
+  {
+    name: "Buyer Sign ups",
+    href: "/dashboard/buyer-signups",
+    icon: UserCheck,
   },
   {
     name: "Business Categories",

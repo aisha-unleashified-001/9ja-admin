@@ -18,6 +18,8 @@ import { Waitlist } from "./pages/Waitlist";
 import { WaitlistDetail } from "./pages/WaitlistDetail";
 import { VendorSignups } from "./pages/VendorSignups";
 import { VendorSignupDetail } from "./pages/VendorSignupDetail";
+import { BuyerSignups } from "./pages/BuyerSignups";
+import { BuyerSignupDetail } from "./pages/BuyerSignupDetail";
 import { BusinessCategories } from "./pages/BusinessCategories";
 import { CreateBusinessCategory } from "./pages/CreateBusinessCategory";
 import { BusinessCategoryDetail } from "./pages/BusinessCategoryDetail";
@@ -67,6 +69,8 @@ function App() {
           <Route path="waitlist/:id" element={<WaitlistDetail />} />
           <Route path="vendor-signups" element={<VendorSignups />} />
           <Route path="vendor-signups/:id" element={<VendorSignupDetail />} />
+          <Route path="buyer-signups" element={<BuyerSignups />} />
+          <Route path="buyer-signups/:id" element={<BuyerSignupDetail />} />
           <Route path="business-categories" element={<BusinessCategories />} />
           <Route
             path="business-categories/create"

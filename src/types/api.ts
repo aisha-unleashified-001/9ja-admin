@@ -241,6 +241,18 @@ export interface VendorSignup {
   businessCategoryName: string | null;
 }
 
+export interface BuyerSignup {
+  id?: string;
+  buyerId: string;
+  fullName: string;
+  emailAddress: string;
+  phoneNumber: string | null;
+  address: string | null;
+  isActive: string; // "0" or "1"
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BusinessCategory {
   id: string;
   categoryName: string;

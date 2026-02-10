@@ -4,6 +4,7 @@ import type {
   Contact,
   WaitlistEntry,
   VendorSignup,
+  BuyerSignup,
   BusinessCategory,
   ProductCategory,
   CreateCategoryRequest,
@@ -330,6 +331,39 @@ class ApiService {
   async getAllVendorSignups(): Promise<PaginatedApiResponse<VendorSignup>> {
     return this.request<PaginatedApiResponse<VendorSignup>>(
       `/backoffice/vendors/signup?page=1&perPage=10000`
+    );
+  }
+
+  // Buyer Signups
+  async getBuyerSignups(
+    page = 1,
+    perPage = 20
+  ): Promise<PaginatedApiResponse<BuyerSignup>> {
+    return this.request<PaginatedApiResponse<BuyerSignup>>(
+      `/backoffice/buyers/signup?page=${page}&perPage=${perPage}`
+    );
+  }
+
+  async getBuyerSignup(buyerId: string): Promise<ApiResponse<BuyerSignup>> {
+    return this.request<ApiResponse<BuyerSignup>>(
+      `/backoffice/buyers/signup/${buyerId}`
+    );
+  }
+
+  async toggleBuyerStatus(
+    buyerId: string
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/buyers/account/${buyerId}/status`,
+      {
+        method: "POST",
+      }
+    );
+  }
+
+  async getAllBuyerSignups(): Promise<PaginatedApiResponse<BuyerSignup>> {
+    return this.request<PaginatedApiResponse<BuyerSignup>>(
+      `/backoffice/buyers/signup?page=1&perPage=10000`
     );
   }
 
