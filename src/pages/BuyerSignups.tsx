@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -28,7 +28,6 @@ type StatusFilterKey = "active" | "inactive";
 type StatusFilters = Record<StatusFilterKey, boolean>;
 
 export function BuyerSignups() {
-  const [searchParams] = useSearchParams();
   const [signups, setSignups] = useState<BuyerSignup[]>([]);
   const [filteredSignups, setFilteredSignups] = useState<BuyerSignup[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
