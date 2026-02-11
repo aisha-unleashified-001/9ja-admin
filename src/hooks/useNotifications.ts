@@ -4,6 +4,7 @@ import type {
   CategoryCount,
   NotificationCounts,
   NotificationItem,
+  TicketsResponse,
 } from "@/types/api";
 
 export function useNotifications() {
@@ -48,56 +49,81 @@ export function useNotifications() {
     }
   }, []);
 
+  // Compute unread vendor/buyer ticket counts directly from the tickets API
+  const fetchTicketUnreadCounts = useCallback(async () => {
+    try {
+      let page = 1;
+      const perPage = 50;
+      let totalPages = 1;
+      let vendorUnread = 0;
+      let buyerUnread = 0;
+
+      // Paginate through all tickets to ensure counts are accurate
+      while (page <= totalPages) {
+        const response = await apiService.getTickets(page, perPage);
+        const ticketsData = response.data as unknown as TicketsResponse | undefined;
+
+        if (!ticketsData || !Array.isArray(ticketsData.tickets)) {
+          break;
+        }
+
+        totalPages = ticketsData.pagination?.totalPages || 1;
+
+        ticketsData.tickets.forEach((ticket) => {
+          const unread = ticket.unreadCount || 0;
+          if (!unread) return;
+
+          if (ticket.userType === "VENDOR") {
+            vendorUnread += unread;
+          } else if (ticket.userType === "BUYER") {
+            buyerUnread += unread;
+          }
+        });
+
+        page += 1;
+      }
+
+      return { vendorUnread, buyerUnread };
+    } catch (error) {
+      console.error("Failed to fetch ticket unread counts:", error);
+      return { vendorUnread: 0, buyerUnread: 0 };
+    }
+  }, []);
+
   const fetchNotifications = useCallback(async () => {
     try {
-      // Fetch both notifications and pending signups in parallel
-      const [notificationsResponse, pendingSignupsCount] = await Promise.all([
-        apiService.getNotifications().catch((err) => {
-          console.error("Failed to fetch notifications:", err);
-          return null;
-        }),
-        fetchPendingSignups(),
-      ]);
+      // Fetch notifications, pending signups, and ticket unread counts in parallel
+      const [notificationsResponse, pendingSignupsCount, ticketCounts] =
+        await Promise.all([
+          apiService.getNotifications().catch((err) => {
+            console.error("Failed to fetch notifications:", err);
+            return null;
+          }),
+          fetchPendingSignups(),
+          fetchTicketUnreadCounts(),
+        ]);
 
-      let vendorCount = 0;
-      let buyerCount = 0;
       let adminCount = 0;
 
       if (notificationsResponse && notificationsResponse.data) {
         const data = notificationsResponse.data;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const explicitCounts = data as any;
         const noteList = data.notifications || [];
         setNotifications(noteList);
 
-        vendorCount = explicitCounts.vendorUnreadMesagesCount || 0;
-        buyerCount = explicitCounts.buyerUnreadMessagesCount || 0;
-        adminCount = explicitCounts.adminUnreadMessages || 0;
+        // Prefer explicit admin unread count if backend provides it,
+        // otherwise derive from unread notifications.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const explicitCounts = data as any;
+        adminCount = explicitCounts.adminUnreadMessages ?? 0;
 
-        // Fallback calculation if explicit counts are missing
-        if (vendorCount === 0 && buyerCount === 0 && noteList.length > 0) {
-          // Reset counters for calculation
-          vendorCount = 0;
-          buyerCount = 0;
-          adminCount = 0;
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          noteList.forEach((n: any) => {
-            if (n.isRead === "0") {
-              const text = (n.title + n.message).toLowerCase();
-              if (text.includes("vendor")) vendorCount++;
-              else if (text.includes("buyer") || text.includes("order"))
-                buyerCount++;
-              else adminCount++;
-            }
-          });
+        if (!adminCount && Array.isArray(noteList) && noteList.length > 0) {
+          adminCount = noteList.filter((n) => n.isRead === "0").length;
         }
       }
 
-      // Always update counts, including pendingSignups
-      const newCounts = {
-        vendors: vendorCount,
-        buyers: buyerCount,
+      const newCounts: NotificationCounts = {
+        vendors: ticketCounts.vendorUnread,
+        buyers: ticketCounts.buyerUnread,
         admin: adminCount,
         pendingSignups: pendingSignupsCount,
       };
@@ -132,7 +158,7 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [fetchPendingSignups]);
+  }, [fetchPendingSignups, fetchTicketUnreadCounts]);
 
   useEffect(() => {
     fetchNotifications();
@@ -140,7 +166,8 @@ export function useNotifications() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // NEW: Mark as Read Function
+  // Mark notifications as read for a given category.
+  // This only affects the notifications API; ticket read state is managed server-side.
   const markAsRead = useCallback(
     async (type: "vendor" | "buyer" | "admin") => {
       const unreadItems = notifications.filter((n) => {

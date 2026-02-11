@@ -235,6 +235,33 @@ export function VendorSignupDetail() {
   const statusInfo = getStatusInfo(signup.isActive);
   const StatusIcon = statusInfo.icon;
 
+  // Safely derive bank/account details from the raw API payload.
+  // The backend may use different field names, so we defensively check several.
+  const rawSignup = signup as unknown as Record<string, unknown>;
+  const bankName =
+    (rawSignup.bankName as string | undefined) ??
+    (rawSignup.bank_name as string | undefined) ??
+    (rawSignup.bank as string | undefined) ??
+    // Settlement bank name from payout configuration
+    (rawSignup.settlementBankName as string | undefined) ??
+    (rawSignup.settlement_bank_name as string | undefined) ??
+    null;
+  const accountName =
+    (rawSignup.accountName as string | undefined) ??
+    (rawSignup.account_name as string | undefined) ??
+    (rawSignup.accountHolderName as string | undefined) ??
+    (rawSignup.account_holder_name as string | undefined) ??
+    null;
+  const accountNumber =
+    (rawSignup.accountNumber as string | undefined) ??
+    (rawSignup.account_no as string | undefined) ??
+    (rawSignup.accountNo as string | undefined) ??
+    (rawSignup.bankAccountNumber as string | undefined) ??
+    (rawSignup.bank_account_number as string | undefined) ??
+    null;
+
+  const hasBankDetails = Boolean(bankName || accountName || accountNumber);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between">
@@ -456,6 +483,34 @@ export function VendorSignupDetail() {
                 <div className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <p className="text-sm">{signup.businessAddress}</p>
+                </div>
+              </div>
+            )}
+            {hasBankDetails && (
+              <div className="pt-2 border-t border-muted">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Bank Details
+                </label>
+                <div className="mt-2 space-y-1">
+                  {bankName && (
+                    <p className="text-sm">
+                      <span className="font-medium">Bank:</span> {bankName}
+                    </p>
+                  )}
+                  {accountName && (
+                    <p className="text-sm">
+                      <span className="font-medium">Account Name:</span>{" "}
+                      {accountName}
+                    </p>
+                  )}
+                  {accountNumber && (
+                    <p className="text-sm font-mono">
+                      <span className="font-medium not-italic">
+                        Account Number:
+                      </span>{" "}
+                      {accountNumber}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
