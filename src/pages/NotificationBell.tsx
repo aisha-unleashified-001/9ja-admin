@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Users, Store, ShieldAlert } from "lucide-react";
+import { Bell, Users, Store, ShieldAlert, UserPlus } from "lucide-react";
 import { useNotifications } from "../hooks/useNotifications";
 import type { CategoryCount } from "@/types/api";
 
@@ -39,6 +39,8 @@ export function NotificationBell() {
         return <Users className="h-4 w-4 text-green-600" />;
       case "admin":
         return <ShieldAlert className="h-4 w-4 text-orange-600" />;
+      case "pendingSignups":
+        return <UserPlus className="h-4 w-4 text-amber-600" />;
       default:
         return <Bell className="h-4 w-4 text-gray-600" />;
     }
@@ -52,9 +54,18 @@ export function NotificationBell() {
         return "bg-green-100";
       case "admin":
         return "bg-orange-100";
+      case "pendingSignups":
+        return "bg-amber-100";
       default:
         return "bg-gray-100";
     }
+  };
+
+  const getCountLabel = (item: { count: number; type: CategoryCount["type"] }) => {
+    if (item.type === "pendingSignups") {
+      return item.count === 1 ? "1 pending sign-up" : `${item.count} pending sign-ups`;
+    }
+    return `${item.count} unread message${item.count !== 1 ? "s" : ""}`;
   };
 
   return (
@@ -116,7 +127,7 @@ export function NotificationBell() {
                         {item.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {item.count} unread message{item.count !== 1 && "s"}
+                        {getCountLabel(item)}
                       </p>
                     </div>
                   </div>

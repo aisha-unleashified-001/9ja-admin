@@ -244,10 +244,13 @@ export interface VendorSignup {
 export interface BuyerSignup {
   id?: string;
   buyerId: string;
-  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  full_name?: string; // API may return snake_case
   emailAddress: string;
   phoneNumber: string | null;
-  address: string | null;
+  address?: string | null;
   isActive: string; // "0" or "1"
   createdAt: string;
   updatedAt: string;
@@ -505,5 +508,5 @@ export interface CategoryCount {
   label: string;
   count: number;
   route: string;
-  type: "vendor" | "buyer" | "admin";
+  type: "vendor" | "buyer" | "admin" | "pendingSignups";
 }

@@ -486,12 +486,17 @@ export function VendorSignupDetail() {
                 </div>
               </div>
             )}
-            {hasBankDetails && (
+            {(hasBankDetails || signup.fullName) && (
               <div className="pt-2 border-t border-muted">
                 <label className="text-sm font-medium text-muted-foreground">
-                  Bank Details
+                  Account Details
                 </label>
                 <div className="mt-2 space-y-1">
+                  {signup.fullName && (
+                    <p className="text-sm">
+                      <span className="font-medium">Name:</span> {signup.fullName}
+                    </p>
+                  )}
                   {bankName && (
                     <p className="text-sm">
                       <span className="font-medium">Bank:</span> {bankName}

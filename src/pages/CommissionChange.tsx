@@ -17,6 +17,7 @@ export function CommissionChange() {
   const [currenCommission, setCurrentCommission] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +57,17 @@ export function CommissionChange() {
   };
 
   const fetchCommission = async () => {
+    setLoadError(null);
     try {
       const response = await apiService.getCommission();
       setCurrentCommission(response.data?.platformCommission || "");
     } catch (err) {
       console.error("Failed to fetch current commission:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to load commission settings.";
+      setLoadError(message);
     }
   };
 
@@ -73,6 +80,15 @@ export function CommissionChange() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Commission Change</h1>
       </div>
+
+      {loadError && (
+        <div className="max-w-2xl p-3 rounded-md bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{loadError}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            You can still update the commission percentage below.
+          </p>
+        </div>
+      )}
 
       <div className="max-w-2xl">
         <Card>

@@ -38,22 +38,24 @@ class ApiService {
     logout();
   }
 
+  /** If true, 401 responses will not call logout (e.g. for endpoints that may return 401 for permission, not auth). */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit & { skipLogoutOn401?: boolean } = {}
   ): Promise<T> {
+    const { skipLogoutOn401, ...fetchOptions } = options;
     const url = `${API_BASE_URL}${endpoint}`;
     const token = this.getToken();
 
     const headers = {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
+      ...fetchOptions.headers,
     };
 
     try {
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers,
         mode: "cors",
       });
@@ -61,7 +63,9 @@ class ApiService {
       if (!response.ok) {
         // Handle authentication errors
         if (response.status === 401) {
-          this.handleAuthError();
+          if (!skipLogoutOn401) {
+            this.handleAuthError();
+          }
           throw new Error("Session expired. Please log in again.");
         }
 
@@ -542,7 +546,8 @@ class ApiService {
       updatedAt: string;
     }>
   > {
-    return this.request<
+    // GET /backoffice/settings requires Basic Auth per API docs
+    return this.requestWithBasicAuth<
       ApiResponse<{
         id: string;
         platformCommission: string;

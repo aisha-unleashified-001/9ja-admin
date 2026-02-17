@@ -24,6 +24,16 @@ import { apiService } from "../services/api";
 import type { BuyerSignup } from "../types/api";
 import { downloadCSV } from "../utils/csvExport";
 
+function getBuyerDisplayName(signup: BuyerSignup): string {
+  const full = (signup.fullName ?? signup.full_name ?? "").trim();
+  if (full) return full;
+  const first = (signup.firstName ?? "").trim();
+  const last = (signup.lastName ?? "").trim();
+  const firstLast = [first, last].filter(Boolean).join(" ").trim();
+  if (firstLast) return firstLast;
+  return signup.emailAddress || "—";
+}
+
 type StatusFilterKey = "active" | "inactive";
 type StatusFilters = Record<StatusFilterKey, boolean>;
 
@@ -88,8 +98,9 @@ export function BuyerSignups() {
         return true;
       }
 
-      return (
-        signup.fullName?.toLowerCase().includes(query) ||
+      const displayName = getBuyerDisplayName(signup);
+    return (
+        displayName.toLowerCase().includes(query) ||
         signup.emailAddress?.toLowerCase().includes(query) ||
         signup.phoneNumber?.toLowerCase().includes(query) ||
         signup.buyerId?.toLowerCase().includes(query)
@@ -143,7 +154,7 @@ export function BuyerSignups() {
 
     const rows = signups.map((signup) => [
       signup.buyerId,
-      signup.fullName,
+      getBuyerDisplayName(signup),
       signup.emailAddress,
       signup.phoneNumber || "",
       signup.address || "",
@@ -360,7 +371,9 @@ export function BuyerSignups() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <h3 className="font-medium">{signup.fullName}</h3>
+                          <h3 className="font-medium">
+                            {getBuyerDisplayName(signup)}
+                          </h3>
                           {getStatusBadge(signup.isActive)}
                         </div>
 

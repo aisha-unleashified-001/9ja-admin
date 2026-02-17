@@ -19,6 +19,16 @@ import {
 import { apiService } from "../services/api";
 import type { BuyerSignup } from "../types/api";
 
+function getBuyerDisplayName(signup: BuyerSignup): string {
+  const full = (signup.fullName ?? signup.full_name ?? "").trim();
+  if (full) return full;
+  const first = (signup.firstName ?? "").trim();
+  const last = (signup.lastName ?? "").trim();
+  const firstLast = [first, last].filter(Boolean).join(" ").trim();
+  if (firstLast) return firstLast;
+  return signup.emailAddress || "—";
+}
+
 export function BuyerSignupDetail() {
   const { id: buyerId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -197,7 +207,9 @@ export function BuyerSignupDetail() {
               <label className="text-sm font-medium text-muted-foreground">
                 Full Name
               </label>
-              <p className="text-sm">{signup.fullName}</p>
+              <p className="text-sm">
+                {getBuyerDisplayName(signup)}
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">

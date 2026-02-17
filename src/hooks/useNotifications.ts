@@ -149,6 +149,12 @@ export function useNotifications() {
           route: "/dashboard/messages",
           type: "admin",
         },
+        {
+          label: "Vendors SignUp",
+          count: newCounts.pendingSignups,
+          route: "/dashboard/vendor-signups",
+          type: "pendingSignups",
+        },
       ];
 
       const filteredCategories = categories.filter((c) => c.count > 0);
@@ -169,7 +175,11 @@ export function useNotifications() {
   // Mark notifications as read for a given category.
   // This only affects the notifications API; ticket read state is managed server-side.
   const markAsRead = useCallback(
-    async (type: "vendor" | "buyer" | "admin") => {
+    async (type: "vendor" | "buyer" | "admin" | "pendingSignups") => {
+      if (type === "pendingSignups") {
+        // Pending signups are cleared by visiting the page / approving; no API to mark read
+        return;
+      }
       const unreadItems = notifications.filter((n) => {
         if (n.isRead !== "0") return false;
         const text = (n.title + n.message).toLowerCase();
