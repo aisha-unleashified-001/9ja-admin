@@ -290,6 +290,20 @@ export interface ReinstateVendorRequest {
   notes?: string;
 }
 
+export interface UpdateVendorAccountInfoRequest {
+  accountNumber: string;
+  settlementBank: string;
+  settlementBankName: string;
+}
+
+export interface Bank {
+  id: number;
+  name: string;
+  code: string;
+  longcode?: string | null;
+  slug?: string;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

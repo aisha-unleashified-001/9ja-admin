@@ -22,6 +22,8 @@ import type {
   TicketMessagesResponse,
   NotificationResponse,
   OverviewStats,
+  UpdateVendorAccountInfoRequest,
+  Bank,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -330,6 +332,23 @@ class ApiService {
         body: JSON.stringify(data),
       }
     );
+  }
+
+  async updateVendorAccountInfo(
+    vendorId: string,
+    data: UpdateVendorAccountInfoRequest
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/${vendorId}/update-account-info`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async getBanks(): Promise<ApiResponse<Bank[]>> {
+    return this.requestWithBasicAuth<ApiResponse<Bank[]>>(`/payment/banks`);
   }
 
   async getAllVendorSignups(): Promise<PaginatedApiResponse<VendorSignup>> {

@@ -24,10 +24,12 @@ import {
   UserCheck,
   AlertTriangle,
   RotateCcw,
+  Pencil,
 } from "lucide-react";
 import { apiService } from "../services/api";
-import type { VendorSignup } from "../types/api";
+import type { VendorSignup, Bank } from "../types/api";
 import { config } from "@/config/env";
+import toast from "react-hot-toast";
 
 export function VendorSignupDetail() {
   const { id: vendorId } = useParams<{ id: string }>();
@@ -48,6 +50,14 @@ export function VendorSignupDetail() {
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string>("");
+  const [showAccountEditModal, setShowAccountEditModal] = useState(false);
+  const [updatingAccount, setUpdatingAccount] = useState(false);
+  const [accountNumberInput, setAccountNumberInput] = useState("");
+  const [settlementBankInput, setSettlementBankInput] = useState("");
+  const [settlementBankNameInput, setSettlementBankNameInput] = useState("");
+  const [banks, setBanks] = useState<Bank[] | null>(null);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [bankSuggestions, setBankSuggestions] = useState<Bank[]>([]);
 
   const fetchSignup = async () => {
     if (!vendorId) return;
@@ -261,6 +271,60 @@ export function VendorSignupDetail() {
     null;
 
   const hasBankDetails = Boolean(bankName || accountName || accountNumber);
+
+  const ensureBanksLoaded = async () => {
+    if (banks || banksLoading) return;
+    try {
+      setBanksLoading(true);
+      const response = await apiService.getBanks();
+      setBanks(response.data ?? []);
+    } catch (err) {
+      console.error("Failed to load banks list:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to load banks list. You can still enter details manually."
+      );
+      setBanks([]);
+    } finally {
+      setBanksLoading(false);
+    }
+  };
+
+  const openAccountEditModal = async () => {
+    setAccountNumberInput(accountNumber ?? "");
+    setSettlementBankInput("");
+    setSettlementBankNameInput(bankName ?? settlementBankNameInput);
+    void ensureBanksLoaded();
+    setShowAccountEditModal(true);
+  };
+
+  const handleUpdateAccountInfo = async () => {
+    if (!vendorId) return;
+    if (!accountNumberInput.trim() || !settlementBankInput.trim() || !settlementBankNameInput.trim()) {
+      toast.error("Please fill in all account fields.");
+      return;
+    }
+
+    setUpdatingAccount(true);
+    try {
+      await apiService.updateVendorAccountInfo(vendorId, {
+        accountNumber: accountNumberInput.trim(),
+        settlementBank: settlementBankInput.trim(),
+        settlementBankName: settlementBankNameInput.trim(),
+      });
+      toast.success("Account information updated successfully.");
+      setShowAccountEditModal(false);
+      await fetchSignup();
+    } catch (err) {
+      console.error("Failed to update vendor account info:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update account information. Please try again."
+      );
+    } finally {
+      setUpdatingAccount(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -488,9 +552,19 @@ export function VendorSignupDetail() {
             )}
             {(hasBankDetails || signup.fullName) && (
               <div className="pt-2 border-t border-muted">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Account Details
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Account Details
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openAccountEditModal}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </button>
+                </div>
                 <div className="mt-2 space-y-1">
                   {signup.fullName && (
                     <p className="text-sm">
@@ -811,6 +885,131 @@ export function VendorSignupDetail() {
                   disabled={unsuspending}
                   variant="outline"
                   className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Account Information Edit Modal */}
+      {showAccountEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pencil className="h-5 w-5" />
+                Edit Account Information
+              </CardTitle>
+              <CardDescription>
+                Update the vendor&apos;s settlement account details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Account Number <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={accountNumberInput}
+                  onChange={(e) => setAccountNumberInput(e.target.value)}
+                  placeholder="e.g., 0108900014"
+                  maxLength={20}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Settlement Bank Code <span className="text-destructive">*</span>
+                </label>
+                {banksLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading banks...</p>
+                ) : (
+                  <>
+                    <Input
+                      value={settlementBankInput}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSettlementBankInput(value);
+
+                        if (banks && banks.length > 0) {
+                          const lower = value.toLowerCase();
+                          const matches = banks
+                            .filter(
+                              (b) =>
+                                b.code.toLowerCase().includes(lower) ||
+                                b.name.toLowerCase().includes(lower)
+                            )
+                            .slice(0, 8);
+                          setBankSuggestions(matches);
+
+                          const exactMatch = banks.find(
+                            (b) => b.code === value || b.name.toLowerCase() === lower
+                          );
+                          if (exactMatch) {
+                            setSettlementBankNameInput(exactMatch.name);
+                          }
+                        }
+                      }}
+                      placeholder="Type bank code or name"
+                    />
+                    {banks && banks.length > 0 && bankSuggestions.length > 0 && settlementBankInput && (
+                      <div className="mt-1 max-h-44 overflow-y-auto rounded-md border bg-background text-sm shadow-lg">
+                        {bankSuggestions.map((bank) => (
+                          <button
+                            key={bank.id}
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-muted"
+                            onClick={() => {
+                              setSettlementBankInput(bank.code);
+                              setSettlementBankNameInput(bank.name);
+                              setBankSuggestions([]);
+                            }}
+                          >
+                            <span>{bank.name}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {bank.code}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!banks && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Bank list unavailable. Enter the bank code manually.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Settlement Bank Name <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={settlementBankNameInput}
+                  onChange={(e) => setSettlementBankNameInput(e.target.value)}
+                  placeholder="e.g., Kuda Bank"
+                  disabled={!!banks && banks.length > 0}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-4">
+                <Button
+                  onClick={handleUpdateAccountInfo}
+                  disabled={updatingAccount}
+                  className="flex-1"
+                >
+                  {updatingAccount ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  disabled={updatingAccount}
+                  onClick={() => setShowAccountEditModal(false)}
                 >
                   Cancel
                 </Button>
