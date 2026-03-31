@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Pencil,
+  ShoppingBag,
 } from "lucide-react";
 import { apiService } from "../services/api";
 import type { VendorSignup, Bank } from "../types/api";
@@ -448,11 +449,19 @@ export function VendorSignupDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Information */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               Personal Information
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/dashboard/vendor-signups/${vendorId}/products`)}
+            >
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              View Products
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>

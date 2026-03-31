@@ -276,6 +276,14 @@ export interface ProductCategory {
   updatedAt: string;
 }
 
+export interface ProductSummary {
+  totalProducts?: number | string;
+  activeProducts?: number | string;
+  inactiveProducts?: number | string;
+  total?: number | string;
+  count?: number | string;
+}
+
 export interface CreateProductCategoryRequest {
   categoryName: string;
 }
@@ -523,4 +531,50 @@ export interface CategoryCount {
   count: number;
   route: string;
   type: "vendor" | "buyer" | "admin" | "pendingSignups";
+}
+
+export interface VendorProductPrice {
+  current?: number;
+  original?: number;
+  [key: string]: unknown;
+}
+
+export interface VendorProductFlags {
+  bestseller?: boolean;
+  featured?: boolean;
+  [key: string]: unknown;
+}
+
+export interface VendorProduct {
+  productId?: string;
+  id?: string;
+  // API returns productName; name is kept as alias for compatibility
+  productName?: string;
+  name?: string;
+  description?: string;
+  productDescription?: string;
+  vendorId?: string;
+  vendorLogo?: string | null;
+  storeName?: string;
+  // API returns unitPrice as a flat number
+  unitPrice?: number;
+  discountPrice?: string;
+  oldPrice?: number;
+  totalPrice?: number;
+  // Legacy nested-price shape (buyer-side storefront)
+  price?: VendorProductPrice | number;
+  currentPrice?: number;
+  originalPrice?: number;
+  images?: string[];
+  productImages?: string[];
+  image?: string;
+  categoryId?: string;
+  categoryName?: string;
+  category?: string;
+  flags?: VendorProductFlags;
+  isActive?: string;
+  stock?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
 }

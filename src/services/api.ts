@@ -4,9 +4,11 @@ import type {
   Contact,
   WaitlistEntry,
   VendorSignup,
+  VendorProduct,
   BuyerSignup,
   BusinessCategory,
   ProductCategory,
+  ProductSummary,
   CreateCategoryRequest,
   CreateProductCategoryRequest,
   LoginCredentials,
@@ -357,6 +359,16 @@ class ApiService {
     );
   }
 
+  async getVendorProducts(
+    vendorId: string,
+    page = 1,
+    perPage = 100
+  ): Promise<PaginatedApiResponse<VendorProduct>> {
+    return this.request<PaginatedApiResponse<VendorProduct>>(
+      `/backoffice/vendors/${vendorId}/products?page=${page}&perPage=${perPage}`
+    );
+  }
+
   // Buyer Signups
   async getBuyerSignups(
     page = 1,
@@ -542,6 +554,12 @@ class ApiService {
   > {
     return this.requestWithBasicAuth<PaginatedApiResponse<ProductCategory>>(
       `/product/category?page=1&perPage=10000`
+    );
+  }
+
+  async getProductSummary(): Promise<ApiResponse<ProductSummary>> {
+    return this.request<ApiResponse<ProductSummary>>(
+      `/backoffice/vendors/product-summary`
     );
   }
 

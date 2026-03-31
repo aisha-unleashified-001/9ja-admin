@@ -10,6 +10,12 @@ import type { ProductCategory } from '../types/api';
 export function ProductCategories() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<ProductCategory[]>([]);
+  const [productSummary, setProductSummary] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    inactiveProducts: 0,
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -20,11 +26,61 @@ export function ProductCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const parseSummaryMetrics = (
+    summaryData: unknown
+  ): { totalProducts: number; activeProducts: number; inactiveProducts: number } => {
+    if (!summaryData || typeof summaryData !== 'object') {
+      return {
+        totalProducts: 0,
+        activeProducts: 0,
+        inactiveProducts: 0,
+      };
+    }
+
+    const data = summaryData as Record<string, unknown>;
+    const parseValue = (rawValue: unknown): number => {
+      if (typeof rawValue === 'number') return Number.isFinite(rawValue) ? rawValue : 0;
+      if (typeof rawValue === 'string') {
+        const parsed = Number(rawValue);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    return {
+      totalProducts: parseValue(data.totalProducts ?? data.total ?? data.count),
+      activeProducts: parseValue(data.activeProducts),
+      inactiveProducts: parseValue(data.inactiveProducts),
+    };
+  };
+
   const fetchCategories = async (page = 1) => {
     setLoading(true);
+    setSummaryLoading(true);
     setError(null);
+
     try {
-      const response = await apiService.getProductCategories(page, 10);
+      const [categoriesResult, summaryResult] = await Promise.allSettled([
+        apiService.getProductCategories(page, 10),
+        apiService.getProductSummary(),
+      ]);
+
+      if (summaryResult.status === 'fulfilled') {
+        setProductSummary(parseSummaryMetrics(summaryResult.value.data));
+      } else {
+        console.error('Failed to fetch product summary:', summaryResult.reason);
+        setProductSummary({
+          totalProducts: 0,
+          activeProducts: 0,
+          inactiveProducts: 0,
+        });
+      }
+
+      if (categoriesResult.status === 'rejected') {
+        throw categoriesResult.reason;
+      }
+
+      const response = categoriesResult.value;
       console.log('Product Categories API Response:', response);
       
       if (response.data && Array.isArray(response.data)) {
@@ -53,6 +109,7 @@ export function ProductCategories() {
       setCategories([]);
     } finally {
       setLoading(false);
+      setSummaryLoading(false);
     }
   };
 
@@ -137,6 +194,63 @@ export function ProductCategories() {
             Add Category
           </Button>
         </Link>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Product Categories</p>
+                <p className="text-2xl font-bold">{pagination.totalItems}</p>
+              </div>
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Products on 9jaCart</p>
+                <p className="text-2xl font-bold">
+                  {summaryLoading ? '...' : productSummary.totalProducts.toLocaleString()}
+                </p>
+              </div>
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Active Products</p>
+                <p className="text-2xl font-bold">
+                  {summaryLoading ? '...' : productSummary.activeProducts.toLocaleString()}
+                </p>
+              </div>
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Inactive Products</p>
+                <p className="text-2xl font-bold">
+                  {summaryLoading ? '...' : productSummary.inactiveProducts.toLocaleString()}
+                </p>
+              </div>
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -272,20 +386,6 @@ export function ProductCategories() {
         </CardContent>
       </Card>
 
-      {/* Summary Stats */}
-      {categories.length > 0 && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Product Categories</p>
-                <p className="text-2xl font-bold">{pagination.totalItems}</p>
-              </div>
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
