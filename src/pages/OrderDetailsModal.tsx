@@ -106,6 +106,29 @@ export default function OrderDetailsModal({
     return { items: itemsList, enrichedOrder: mergedOrder, processedTimeline: processed };
   }, [fetchedData, initialOrderData]);
 
+  const deliveryAddress = useMemo(() => {
+    const addressObject = enrichedOrder?.customerInfo?.address;
+    if (addressObject && typeof addressObject === "object") {
+      const formattedAddress = [
+        addressObject.streetAddress,
+        addressObject.apartment,
+        addressObject.city,
+        addressObject.companyName,
+      ]
+        .filter((value) => Boolean(value && String(value).trim()))
+        .join(", ");
+
+      if (formattedAddress) return formattedAddress;
+    }
+
+    return (
+      enrichedOrder?.deliveryAddress ||
+      enrichedOrder?.shippingAddress ||
+      enrichedOrder?.address ||
+      "N/A"
+    );
+  }, [enrichedOrder]);
+
   if (!initialOrderData) return null;
 
   return (
@@ -216,6 +239,12 @@ export default function OrderDetailsModal({
               <span className="text-gray-400">Phone</span>
               <span className="font-medium text-[#182F38]">
                 {enrichedOrder.customerPhone || enrichedOrder.phone || "N/A"}
+              </span>
+            </div>
+            <div className="flex justify-between items-start gap-4">
+              <span className="text-gray-400">Delivery address</span>
+              <span className="font-medium text-[#182F38] text-right max-w-[65%] break-words">
+                {deliveryAddress}
               </span>
             </div>
           </section>
