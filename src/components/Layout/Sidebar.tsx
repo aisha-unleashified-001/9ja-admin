@@ -14,6 +14,7 @@ import {
   Store,
   Percent,
   UserCheck,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/Button";
@@ -27,6 +28,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
   {
     name: "Vendors SignUp",
     href: "/dashboard/vendor-signups",

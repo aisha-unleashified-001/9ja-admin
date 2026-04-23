@@ -578,3 +578,64 @@ export interface VendorProduct {
   updatedAt?: string;
   [key: string]: unknown;
 }
+
+// ─── Analytics types ───────────────────────────────────────────────────────
+
+export type Timeframe = "7d" | "30d";
+
+export interface AnalyticsRevenueSeries {
+  label: string;
+  value: number;
+}
+
+export interface AnalyticsCategoryItem {
+  category: string;
+  percentage: number;
+}
+
+export interface AnalyticsProductItem {
+  product: string;
+  sales: number;
+  revenue: number;
+}
+
+export interface AnalyticsLocationItem {
+  state: string;
+  percentage: number;
+}
+
+export interface AnalyticsCustomerInsight {
+  totalCustomers: number;
+  newCustomersLabel: string;
+  newCustomers: number;
+  repeatBuyers: number;
+  locations: AnalyticsLocationItem[];
+}
+
+export interface AnalyticsData {
+  inventorySnapshot: {
+    totalProducts: number;
+    totalOrders: number;
+    totalRevenue: number;
+    pendingOrders: number;
+  };
+  summaryCards: {
+    totalRevenue: number;
+    totalOrders: number;
+    avgOrderValue: number;
+    conversionRate: number;
+  };
+  revenueSeries: {
+    "7d": AnalyticsRevenueSeries[];
+    "30d": AnalyticsRevenueSeries[];
+  };
+  salesByCategory: AnalyticsCategoryItem[];
+  topSellingProducts: {
+    "7d": AnalyticsProductItem[];
+    "30d": AnalyticsProductItem[];
+  };
+  customerInsights: {
+    "7d": AnalyticsCustomerInsight;
+    "30d": AnalyticsCustomerInsight;
+  };
+}

@@ -26,6 +26,11 @@ import type {
   OverviewStats,
   UpdateVendorAccountInfoRequest,
   Bank,
+  AnalyticsData,
+  AnalyticsRevenueSeries,
+  AnalyticsCategoryItem,
+  AnalyticsProductItem,
+  AnalyticsCustomerInsight,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -656,6 +661,268 @@ class ApiService {
       }
     );
   }
+
+  async getVendorAnalytics(vendorId: string): Promise<AnalyticsData> {
+    try {
+      const raw = await this.request<{
+        status?: number;
+        error?: boolean;
+        message?: string;
+        data?: Record<string, unknown>;
+      }>(`/backoffice/vendors/${vendorId}/analytics`);
+
+      if (raw?.error) throw new Error(raw.message || "Analytics fetch failed");
+      return normalizeAnalyticsPayload(
+        (raw?.data ?? raw ?? {}) as Record<string, unknown>
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("Session expired") ||
+          error.message.includes("Network error") ||
+          error.message.includes("HTTP 4") ||
+          error.message.includes("HTTP 5"))
+      ) {
+        throw error;
+      }
+      return getAnalyticsDefaults();
+    }
+  }
+}
+
+// ─── Analytics helpers ─────────────────────────────────────────────────────
+
+function toNum(val: unknown): number {
+  if (typeof val === "number") return isNaN(val) ? 0 : val;
+  if (typeof val === "string") {
+    const n = parseFloat(val);
+    return isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+export function getAnalyticsDefaults(): AnalyticsData {
+  return {
+    inventorySnapshot: {
+      totalProducts: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+    },
+    summaryCards: {
+      totalRevenue: 0,
+      totalOrders: 0,
+      avgOrderValue: 0,
+      conversionRate: 0,
+    },
+    revenueSeries: { "7d": [], "30d": [] },
+    salesByCategory: [],
+    topSellingProducts: { "7d": [], "30d": [] },
+    customerInsights: {
+      "7d": {
+        totalCustomers: 0,
+        newCustomersLabel: "This Week",
+        newCustomers: 0,
+        repeatBuyers: 0,
+        locations: [],
+      },
+      "30d": {
+        totalCustomers: 0,
+        newCustomersLabel: "This Month",
+        newCustomers: 0,
+        repeatBuyers: 0,
+        locations: [],
+      },
+    },
+  };
+}
+
+function normalizeAnalyticsPayload(
+  data: Record<string, unknown>
+): AnalyticsData {
+  if (!data || typeof data !== "object") return getAnalyticsDefaults();
+
+  // ── KPI values (flat fields at top level) ──────────────────────────────
+  const totalRevenue = toNum(
+    data.totalRevenue ??
+      (data.inventorySnapshot as Record<string, unknown>)?.totalRevenue ??
+      0
+  );
+  const totalOrders = toNum(
+    data.totalOrders ??
+      (data.inventorySnapshot as Record<string, unknown>)?.totalOrders ??
+      0
+  );
+  const pendingOrders = toNum(
+    data.pendingOrders ??
+      (data.inventorySnapshot as Record<string, unknown>)?.pendingOrders ??
+      0
+  );
+  const avgOrderValue = toNum(
+    data.avgOrderValue ??
+      data.averageOrderValue ??
+      (data.summaryCards as Record<string, unknown>)?.avgOrderValue ??
+      0
+  );
+
+  const inventorySnapshot = {
+    totalProducts: toNum(
+      data.totalProducts ??
+        (data.inventorySnapshot as Record<string, unknown>)?.totalProducts ??
+        0
+    ),
+    totalOrders,
+    totalRevenue,
+    pendingOrders,
+  };
+
+  const summaryCards = {
+    totalRevenue,
+    totalOrders,
+    avgOrderValue,
+    conversionRate: toNum(data.conversionRate ?? 0),
+  };
+
+  // ── Weekly revenue chart ────────────────────────────────────────────────
+  const weeklyOverview = (data.weeklyRevenueOverview ?? {}) as Record<string, unknown>;
+  const dailyBreakdown = Array.isArray(weeklyOverview.dailyBreakdown)
+    ? weeklyOverview.dailyBreakdown
+    : [];
+
+  const seriesRaw = (data.revenueSeries ?? {}) as Record<string, unknown>;
+
+  const mapSeriesItems = (arr: unknown[]): AnalyticsRevenueSeries[] =>
+    arr
+      .map((item, i) => {
+        const d = item as Record<string, unknown>;
+        return {
+          // prefer short day name ("Monday") → fallback to date string → index
+          label: String(d.day ?? d.label ?? d.date ?? d.week ?? `Day ${i + 1}`),
+          value: toNum(d.revenue ?? d.value ?? d.amount ?? 0),
+        };
+      })
+      .filter((s) => !isNaN(s.value));
+
+  const revenueSeries7d: AnalyticsRevenueSeries[] =
+    dailyBreakdown.length > 0
+      ? mapSeriesItems(dailyBreakdown)
+      : Array.isArray(seriesRaw["7d"])
+      ? mapSeriesItems(seriesRaw["7d"] as unknown[])
+      : Array.isArray(seriesRaw.daily)
+      ? mapSeriesItems(seriesRaw.daily as unknown[])
+      : Array.isArray(data.revenueTrend)
+      ? mapSeriesItems(data.revenueTrend as unknown[])
+      : [];
+
+  const revenueSeries30d: AnalyticsRevenueSeries[] = Array.isArray(seriesRaw["30d"])
+    ? mapSeriesItems(seriesRaw["30d"] as unknown[])
+    : Array.isArray(seriesRaw.monthly)
+    ? mapSeriesItems(seriesRaw.monthly as unknown[])
+    : revenueSeries7d; // fall back to weekly data
+
+  // ── Categories ─────────────────────────────────────────────────────────
+  // API field: topCategories[].categoryName / .percentage
+  const catRaw: unknown[] = Array.isArray(data.topCategories)
+    ? (data.topCategories as unknown[])
+    : Array.isArray(data.salesByCategory)
+    ? (data.salesByCategory as unknown[])
+    : Array.isArray(data.categories)
+    ? (data.categories as unknown[])
+    : [];
+
+  const salesByCategory: AnalyticsCategoryItem[] = catRaw
+    .map((item) => {
+      const d = item as Record<string, unknown>;
+      return {
+        category: String(
+          d.categoryName ?? d.category ?? d.name ?? d.label ?? "Unknown"
+        ),
+        percentage: toNum(d.percentage ?? d.percent ?? d.value ?? 0),
+      };
+    })
+    .sort((a, b) => b.percentage - a.percentage);
+
+  // ── Top products ────────────────────────────────────────────────────────
+  // API field: topProducts[].productName / .totalSold / .totalRevenue
+  const mapProducts = (arr: unknown[]): AnalyticsProductItem[] =>
+    arr
+      .map((item) => {
+        const d = item as Record<string, unknown>;
+        return {
+          product: String(
+            d.productName ?? d.product ?? d.name ?? d.title ?? "Unknown"
+          ),
+          sales: toNum(d.totalSold ?? d.sales ?? d.itemsSold ?? d.quantity ?? d.count ?? 0),
+          revenue: toNum(d.totalRevenue ?? d.revenue ?? d.amount ?? 0),
+        };
+      })
+      .filter((p) => p.sales > 0 || p.revenue > 0)
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 10);
+
+  // topProducts may be a flat array or nested with "7d"/"30d" keys
+  const prodSource = data.topProducts ?? data.topSellingProducts ?? data.products;
+  let products: AnalyticsProductItem[] = [];
+  if (Array.isArray(prodSource)) {
+    products = mapProducts(prodSource as unknown[]);
+  } else if (prodSource && typeof prodSource === "object") {
+    const ps = prodSource as Record<string, unknown>;
+    products = Array.isArray(ps["7d"])
+      ? mapProducts(ps["7d"] as unknown[])
+      : [];
+  }
+
+  // ── Customer insights ───────────────────────────────────────────────────
+  // API fields: customerInsights.totalCustomers / .newCustomersCurrentMonth
+  //             .repeatBuyers / .customerLocations[].city / .percentage
+  const custRaw = (data.customerInsights ?? data.customers ?? {}) as Record<string, unknown>;
+
+  const mapLocations = (arr: unknown[]) =>
+    arr.map((l) => {
+      const d = l as Record<string, unknown>;
+      return {
+        // API returns "city", our type uses "state" as the display label
+        state: String(d.city ?? d.state ?? d.location ?? d.name ?? "Unknown"),
+        percentage: toNum(d.percentage ?? d.percent ?? d.value ?? 0),
+      };
+    });
+
+  const buildInsight = (obj: Record<string, unknown>): AnalyticsCustomerInsight => {
+    const locs = Array.isArray(obj.customerLocations)
+      ? mapLocations(obj.customerLocations as unknown[])
+      : Array.isArray(obj.locations)
+      ? mapLocations(obj.locations as unknown[])
+      : [];
+
+    return {
+      totalCustomers: toNum(obj.totalCustomers ?? obj.total ?? 0),
+      newCustomersLabel: "This Month",
+      newCustomers: toNum(
+        obj.newCustomersCurrentMonth ??
+          obj.newCustomers ??
+          obj.newCustomersThisMonth ??
+          obj.new ??
+          0
+      ),
+      repeatBuyers: toNum(obj.repeatBuyers ?? obj.returning ?? 0),
+      locations: locs,
+    };
+  };
+
+  // Support both flat customerInsights and timeframe-nested shapes
+  const insight =
+    typeof custRaw["7d"] === "object" && custRaw["7d"] !== null
+      ? buildInsight(custRaw["7d"] as Record<string, unknown>)
+      : buildInsight(custRaw);
+
+  return {
+    inventorySnapshot,
+    summaryCards,
+    revenueSeries: { "7d": revenueSeries7d, "30d": revenueSeries30d },
+    salesByCategory,
+    topSellingProducts: { "7d": products, "30d": products },
+    customerInsights: { "7d": insight, "30d": insight },
+  };
 }
 
 export const apiService = new ApiService();

@@ -33,6 +33,7 @@ import { useAuthStore } from "./stores/authStore";
 import { useAuthCheck } from "./hooks/useAuthCheck";
 import { Toast } from "./components/ui/Toast";
 import OrdersPage from "./pages/Orders";
+import { AnalyticsPage } from "./pages/Analytics";
 
 function App() {
   const { initializeAuth } = useAuthStore();
@@ -91,6 +92,7 @@ function App() {
             path="product-categories/:id"
             element={<ProductCategoryDetail />}
           />
+          <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
       </Routes>
       <Toast />
