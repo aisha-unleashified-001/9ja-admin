@@ -40,7 +40,8 @@ const formatNumber = (value: number): string =>
 
 const getAccent = (index: number): string => {
   const opacities = [1, 0.82, 0.65, 0.5, 0.38, 0.28];
-  return `rgba(34, 197, 94, ${opacities[index % opacities.length]})`;
+  const pct = Math.round(opacities[index % opacities.length] * 100);
+  return `color-mix(in oklch, var(--primary) ${pct}%, transparent)`;
 };
 
 const WEEK_DAYS_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -254,7 +255,7 @@ function VendorSearch({
       <Button
         type="submit"
         size="sm"
-        className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+        className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
         disabled={!value.trim()}
       >
         <Search className="h-4 w-4" />
@@ -314,7 +315,7 @@ function WeeklyComparisonChart({
       {/* Legend + hover readout */}
       <div className="flex flex-wrap items-center gap-4 mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="h-0.5 w-5 rounded-full bg-green-500" />
+          <div className="h-0.5 w-5 rounded-full bg-primary" />
           <span className="text-[11px] text-muted-foreground">This Week</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -324,7 +325,7 @@ function WeeklyComparisonChart({
         {hovered !== null && (
           <div className="ml-auto flex items-center gap-3 text-[11px] font-medium">
             <span className="text-muted-foreground">{WEEK_DAYS_LABELS[hovered]}</span>
-            <span className="text-green-600">
+            <span className="text-primary">
               {formatCurrency(thisWeek[hovered]?.revenue ?? 0)}
             </span>
             <span className="text-blue-500">
@@ -367,7 +368,7 @@ function WeeklyComparisonChart({
           <path
             d={pathD(thisWeekPts)}
             fill="none"
-            stroke="rgb(34,197,94)"
+            stroke="var(--primary)"
             strokeWidth="2"
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -402,7 +403,7 @@ function WeeklyComparisonChart({
                 cx={thisWeekPts[i][0]}
                 cy={thisWeekPts[i][1]}
                 r={hovered === i ? 5 : 3.5}
-                fill="rgb(34,197,94)"
+                fill="var(--primary)"
                 stroke="white"
                 strokeWidth="1.5"
                 style={{ pointerEvents: "none" }}
@@ -529,8 +530,8 @@ function AnalyticsDashboard({
           label="Total Revenue"
           value={formatCurrency(data.summaryCards.totalRevenue)}
           sub="All-time revenue"
-          icon={<TrendingUp className="h-5 w-5 text-green-500" />}
-          iconBg="bg-green-500/10"
+          icon={<TrendingUp className="h-5 w-5 text-primary" />}
+          iconBg="bg-primary/10"
         />
         <KpiCard
           label="Total Orders"
@@ -575,13 +576,13 @@ function AnalyticsDashboard({
               <div className="flex items-center gap-2 shrink-0">
                 {/* Running totals */}
                 {chartMode === "bar" && totalWeeklyRevenue > 0 && (
-                  <span className="text-sm font-semibold text-green-600">
+                  <span className="text-sm font-semibold text-primary">
                     {formatCurrency(totalWeeklyRevenue)}
                   </span>
                 )}
                 {chartMode === "compare" && (
                   <div className="hidden sm:flex items-center gap-1.5 text-xs">
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-primary">
                       {formatCurrency(thisWeekTotal)}
                     </span>
                     <span className="text-muted-foreground">/</span>
@@ -596,7 +597,7 @@ function AnalyticsDashboard({
                     onClick={() => setChartMode("bar")}
                     className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${
                       chartMode === "bar"
-                        ? "bg-green-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-transparent text-muted-foreground hover:bg-muted"
                     }`}
                     title="This week bar chart"
@@ -608,7 +609,7 @@ function AnalyticsDashboard({
                     onClick={() => setChartMode("compare")}
                     className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors border-l border-border ${
                       chartMode === "compare"
-                        ? "bg-green-600 text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-transparent text-muted-foreground hover:bg-muted"
                     }`}
                     title="Compare with last week"
@@ -643,7 +644,7 @@ function AnalyticsDashboard({
                             background:
                               point.value > 0
                                 ? getAccent(i)
-                                : "rgba(34,197,94,0.15)",
+                                : "color-mix(in oklch, var(--primary) 15%, transparent)",
                           }}
                           title={`${point.label}: ${formatCurrency(point.value)}`}
                         />
@@ -893,7 +894,7 @@ export function AnalyticsPage() {
         <Button
           variant="outline"
           size="sm"
-          className="border-green-500/50 text-green-600 hover:opacity-80 gap-2 self-start"
+          className="border-primary/50 text-primary hover:opacity-80 gap-2 self-start"
           onClick={() => {/* export placeholder */}}
         >
           <Download className="h-4 w-4" />
