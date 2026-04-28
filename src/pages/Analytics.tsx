@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Download,
   TrendingUp,
   ShoppingCart,
   BarChart2,
+  LineChart,
+  RotateCcw,
   Clock,
   RefreshCw,
   AlertCircle,
@@ -20,6 +22,8 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useVendorAnalytics } from "../hooks/useVendorAnalytics";
 import { getAnalyticsDefaults } from "../services/api";
+import { apiService } from "../services/api";
+import type { VendorSignup, WeeklyRevenuePoint } from "../types/api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -38,6 +42,8 @@ const getAccent = (index: number): string => {
   const opacities = [1, 0.82, 0.65, 0.5, 0.38, 0.28];
   return `rgba(34, 197, 94, ${opacities[index % opacities.length]})`;
 };
+
+const WEEK_DAYS_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 // ─── Tiny reusable pieces ─────────────────────────────────────────────────
 
@@ -110,22 +116,86 @@ function InsightMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── Vendor ID search bar ─────────────────────────────────────────────────
+interface VendorOption {
+  vendorId: string;
+  fullName: string;
+  emailAddress: string;
+}
+
+// ─── Vendor search bar ────────────────────────────────────────────────────
 
 function VendorSearch({
-  activeVendorId,
+  activeSearch,
+  vendorOptions,
+  optionsLoading,
   onSearch,
 }: {
-  activeVendorId: string;
-  onSearch: (id: string) => void;
+  activeSearch: string;
+  vendorOptions: VendorOption[];
+  optionsLoading: boolean;
+  onSearch: (value: string, vendor?: VendorOption) => void;
 }) {
-  const [value, setValue] = useState(activeVendorId);
+  const [value, setValue] = useState(activeSearch);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<VendorOption | null>(null);
+
+  useEffect(() => {
+    setValue(activeSearch);
+    if (!activeSearch) {
+      setSelectedVendor(null);
+    }
+  }, [activeSearch]);
+
+  const normalizedQuery = value.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return vendorOptions
+      .filter((vendor) => {
+        const name = vendor.fullName?.toLowerCase() ?? "";
+        const email = vendor.emailAddress?.toLowerCase() ?? "";
+        return (
+          name.includes(normalizedQuery) || email.includes(normalizedQuery)
+        );
+      })
+      .slice(0, 8);
+  }, [normalizedQuery, vendorOptions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = value.trim();
-    if (trimmed) onSearch(trimmed);
+    if (!trimmed) return;
+    if (selectedVendor) {
+      onSearch(selectedVendor.emailAddress, selectedVendor);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const exactMatch = vendorOptions.find((vendor) => {
+      const name = vendor.fullName?.trim().toLowerCase();
+      const email = vendor.emailAddress?.trim().toLowerCase();
+      return (
+        name === trimmed.toLowerCase() || email === trimmed.toLowerCase()
+      );
+    });
+
+    if (exactMatch) {
+      setSelectedVendor(exactMatch);
+      setValue(exactMatch.fullName || exactMatch.emailAddress);
+      onSearch(exactMatch.emailAddress, exactMatch);
+      setShowSuggestions(false);
+      return;
+    }
+
+    onSearch(trimmed);
+    setShowSuggestions(false);
+  };
+
+  const handleSuggestionSelect = (vendor: VendorOption) => {
+    setSelectedVendor(vendor);
+    setValue(vendor.fullName || vendor.emailAddress);
+    onSearch(vendor.emailAddress, vendor);
+    setShowSuggestions(false);
   };
 
   return (
@@ -135,16 +205,57 @@ function VendorSearch({
         <Input
           ref={inputRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Paste vendor UUID here..."
-          className="pl-9 font-mono text-sm"
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSelectedVendor(null);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => {
+            setTimeout(() => setShowSuggestions(false), 120);
+          }}
+          placeholder="Search vendor by name or email..."
+          className="pl-9 text-sm"
         />
+        {showSuggestions && normalizedQuery ? (
+          <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover shadow-md">
+            {optionsLoading ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                Loading vendors...
+              </p>
+            ) : suggestions.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                No matching vendors found
+              </p>
+            ) : (
+              <ul className="max-h-64 overflow-auto py-1">
+                {suggestions.map((vendor) => (
+                  <li key={vendor.vendorId || vendor.emailAddress}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSuggestionSelect(vendor)}
+                      className="w-full px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                    >
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {vendor.fullName || "Unnamed Vendor"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {vendor.emailAddress}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </div>
       <Button
         type="submit"
         size="sm"
         className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-        disabled={!value.trim() || value.trim() === activeVendorId}
+        disabled={!value.trim()}
       >
         <Search className="h-4 w-4" />
         Load
@@ -153,28 +264,192 @@ function VendorSearch({
   );
 }
 
-// ─── Empty prompt ─────────────────────────────────────────────────────────
+// ─── Weekly comparison line chart ─────────────────────────────────────────
 
-function NoVendorState() {
+function WeeklyComparisonChart({
+  thisWeek,
+  lastWeek,
+}: {
+  thisWeek: WeeklyRevenuePoint[];
+  lastWeek: WeeklyRevenuePoint[];
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const allRevenues = [
+    ...thisWeek.map((p) => p.revenue),
+    ...lastWeek.map((p) => p.revenue),
+  ];
+  const maxVal = Math.max(...allRevenues, 1);
+
+  const VW = 560, VH = 180;
+  const pl = 8, pr = 12, pt = 10, pb = 32;
+  const chartW = VW - pl - pr;
+  const chartH = VH - pt - pb;
+  const n = 7;
+
+  const toX = (i: number) => pl + (i / (n - 1)) * chartW;
+  const toY = (val: number) => pt + chartH - (val / maxVal) * chartH;
+
+  const thisWeekPts = thisWeek
+    .slice(0, n)
+    .map((p, i): [number, number] => [toX(i), toY(p.revenue)]);
+  const lastWeekPts = lastWeek
+    .slice(0, n)
+    .map((p, i): [number, number] => [toX(i), toY(p.revenue)]);
+
+  const pathD = (pts: [number, number][]) =>
+    pts
+      .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+      .join(" ");
+
+  const hasThisWeek = thisWeek.some((p) => p.revenue > 0);
+  const hasLastWeek = lastWeek.some((p) => p.revenue > 0);
+
+  if (!hasThisWeek && !hasLastWeek) {
+    return <EmptyState message="No comparison data available." />;
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-28 gap-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-        <Store className="h-8 w-8 text-muted-foreground" />
+    <div>
+      {/* Legend + hover readout */}
+      <div className="flex flex-wrap items-center gap-4 mb-3">
+        <div className="flex items-center gap-1.5">
+          <div className="h-0.5 w-5 rounded-full bg-green-500" />
+          <span className="text-[11px] text-muted-foreground">This Week</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-0.5 w-5 rounded-full bg-blue-400" />
+          <span className="text-[11px] text-muted-foreground">Last Week</span>
+        </div>
+        {hovered !== null && (
+          <div className="ml-auto flex items-center gap-3 text-[11px] font-medium">
+            <span className="text-muted-foreground">{WEEK_DAYS_LABELS[hovered]}</span>
+            <span className="text-green-600">
+              {formatCurrency(thisWeek[hovered]?.revenue ?? 0)}
+            </span>
+            <span className="text-blue-500">
+              {formatCurrency(lastWeek[hovered]?.revenue ?? 0)}
+            </span>
+          </div>
+        )}
       </div>
-      <div>
-        <p className="font-semibold text-foreground">No vendor selected</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Enter a vendor ID above to load their analytics.
-        </p>
-      </div>
+
+      <svg viewBox={`0 0 ${VW} ${VH}`} width="100%" style={{ height: "180px" }}>
+        {/* Horizontal grid lines */}
+        {([0.25, 0.5, 0.75, 1] as const).map((pct) => {
+          const y = toY(maxVal * pct);
+          return (
+            <line
+              key={pct}
+              x1={pl} y1={y}
+              x2={pl + chartW} y2={y}
+              stroke="#e5e7eb"
+              strokeWidth="0.8"
+              strokeDasharray="4,4"
+            />
+          );
+        })}
+
+        {/* Last week line */}
+        {hasLastWeek && (
+          <path
+            d={pathD(lastWeekPts)}
+            fill="none"
+            stroke="rgba(96,165,250,0.75)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
+
+        {/* This week line */}
+        {hasThisWeek && (
+          <path
+            d={pathD(thisWeekPts)}
+            fill="none"
+            stroke="rgb(34,197,94)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
+
+        {/* Points + labels + hit areas */}
+        {WEEK_DAYS_LABELS.map((day, i) => (
+          <g key={day}>
+            {hovered === i && (
+              <line
+                x1={toX(i)} y1={pt}
+                x2={toX(i)} y2={pt + chartH}
+                stroke="#d1d5db"
+                strokeWidth="1"
+                strokeDasharray="4,2"
+              />
+            )}
+            {hasLastWeek && (
+              <circle
+                cx={lastWeekPts[i][0]}
+                cy={lastWeekPts[i][1]}
+                r={hovered === i ? 5 : 3.5}
+                fill="rgba(96,165,250,0.9)"
+                stroke="white"
+                strokeWidth="1.5"
+                style={{ pointerEvents: "none" }}
+              />
+            )}
+            {hasThisWeek && (
+              <circle
+                cx={thisWeekPts[i][0]}
+                cy={thisWeekPts[i][1]}
+                r={hovered === i ? 5 : 3.5}
+                fill="rgb(34,197,94)"
+                stroke="white"
+                strokeWidth="1.5"
+                style={{ pointerEvents: "none" }}
+              />
+            )}
+            <text
+              x={toX(i)}
+              y={VH - 8}
+              textAnchor="middle"
+              fontSize="13"
+              fill="#9ca3af"
+            >
+              {day}
+            </text>
+            {/* Invisible hit area for hover */}
+            <rect
+              x={toX(i) - 35}
+              y={pt}
+              width="70"
+              height={chartH + 4}
+              fill="transparent"
+              style={{ cursor: "crosshair" }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          </g>
+        ))}
+      </svg>
     </div>
   );
 }
 
 // ─── Analytics dashboard ──────────────────────────────────────────────────
 
-function AnalyticsDashboard({ vendorId }: { vendorId: string }) {
-  const { analyticsData, isLoading, error, refetch } = useVendorAnalytics(vendorId);
+function AnalyticsDashboard({
+  searchValue,
+  searchRequestKey,
+  selectedVendor,
+}: {
+  searchValue: string;
+  searchRequestKey: number;
+  selectedVendor: VendorOption | null;
+}) {
+  const { analyticsData, isLoading, error, refetch } = useVendorAnalytics(
+    searchValue,
+    searchRequestKey
+  );
   const data = analyticsData ?? getAnalyticsDefaults();
 
   // Revenue chart uses "7d" series (mapped from weeklyRevenueOverview.dailyBreakdown)
@@ -185,6 +460,11 @@ function AnalyticsDashboard({ vendorId }: { vendorId: string }) {
 
   const insight = data.customerInsights["7d"];
   const topProducts = data.topSellingProducts["7d"];
+
+  const [chartMode, setChartMode] = useState<"bar" | "compare">("bar");
+  const weeklyComparison = data.weeklyRevenueComparison;
+  const thisWeekTotal = weeklyComparison.thisWeek.reduce((sum, p) => sum + p.revenue, 0);
+  const lastWeekTotal = weeklyComparison.lastWeek.reduce((sum, p) => sum + p.revenue, 0);
 
   // ── Skeleton ──
   if (isLoading) {
@@ -224,12 +504,24 @@ function AnalyticsDashboard({ vendorId }: { vendorId: string }) {
         </div>
       )}
 
-      {/* Active vendor badge */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Store className="h-3.5 w-3.5 shrink-0" />
-        <span>Vendor</span>
-        <code className="bg-muted px-1.5 py-0.5 rounded font-mono">{vendorId}</code>
-      </div>
+      {searchValue ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Store className="h-3.5 w-3.5 shrink-0" />
+          <span>Filtered by</span>
+          {selectedVendor ? (
+            <code className="bg-muted px-1.5 py-0.5 rounded">
+              {selectedVendor.fullName} ({selectedVendor.emailAddress})
+            </code>
+          ) : (
+            <code className="bg-muted px-1.5 py-0.5 rounded">{searchValue}</code>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Store className="h-3.5 w-3.5 shrink-0" />
+          <span>Showing general analytics for all vendors</span>
+        </div>
+      )}
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -266,61 +558,110 @@ function AnalyticsDashboard({ vendorId }: { vendorId: string }) {
       {/* ── Revenue chart + Categories ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
-        {/* Weekly revenue bar chart */}
+        {/* Weekly revenue bar chart / comparison */}
         <Card className="xl:col-span-2">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="text-base font-semibold">
                   Weekly Revenue Overview
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Daily revenue breakdown for the current week
+                  {chartMode === "bar"
+                    ? "Daily revenue breakdown for the current week"
+                    : "This week vs last week comparison"}
                 </p>
               </div>
-              {totalWeeklyRevenue > 0 && (
-                <span className="shrink-0 text-sm font-semibold text-green-600">
-                  {formatCurrency(totalWeeklyRevenue)}
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Running totals */}
+                {chartMode === "bar" && totalWeeklyRevenue > 0 && (
+                  <span className="text-sm font-semibold text-green-600">
+                    {formatCurrency(totalWeeklyRevenue)}
+                  </span>
+                )}
+                {chartMode === "compare" && (
+                  <div className="hidden sm:flex items-center gap-1.5 text-xs">
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(thisWeekTotal)}
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="font-semibold text-blue-500">
+                      {formatCurrency(lastWeekTotal)}
+                    </span>
+                  </div>
+                )}
+                {/* Chart mode toggle */}
+                <div className="flex rounded-md border border-border overflow-hidden text-xs">
+                  <button
+                    onClick={() => setChartMode("bar")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors ${
+                      chartMode === "bar"
+                        ? "bg-green-600 text-white"
+                        : "bg-transparent text-muted-foreground hover:bg-muted"
+                    }`}
+                    title="This week bar chart"
+                  >
+                    <BarChart2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">This Week</span>
+                  </button>
+                  <button
+                    onClick={() => setChartMode("compare")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 transition-colors border-l border-border ${
+                      chartMode === "compare"
+                        ? "bg-green-600 text-white"
+                        : "bg-transparent text-muted-foreground hover:bg-muted"
+                    }`}
+                    title="Compare with last week"
+                  >
+                    <LineChart className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Compare</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {revenueSeries.length === 0 ? (
-              <EmptyState message="No weekly revenue data available." />
+            {chartMode === "bar" ? (
+              revenueSeries.length === 0 ? (
+                <EmptyState message="No weekly revenue data available." />
+              ) : (
+                <div className="flex items-end gap-2 h-48 pt-4">
+                  {revenueSeries.map((point, i) => {
+                    const heightPct = Math.max(
+                      (point.value / highestRevenue) * 100,
+                      8
+                    );
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1 flex-1 group">
+                        <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {point.value > 0 ? formatCurrency(point.value) : "—"}
+                        </span>
+                        <div
+                          className="w-full rounded-t-sm transition-all duration-300"
+                          style={{
+                            height: `${heightPct}%`,
+                            background:
+                              point.value > 0
+                                ? getAccent(i)
+                                : "rgba(34,197,94,0.15)",
+                          }}
+                          title={`${point.label}: ${formatCurrency(point.value)}`}
+                        />
+                        <span className="text-[10px] text-muted-foreground truncate max-w-full">
+                          {point.label.length > 3
+                            ? point.label.slice(0, 3)
+                            : point.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             ) : (
-              <div className="flex items-end gap-2 h-48 pt-4">
-                {revenueSeries.map((point, i) => {
-                  const heightPct = Math.max(
-                    (point.value / highestRevenue) * 100,
-                    8
-                  );
-                  return (
-                    <div key={i} className="flex flex-col items-center gap-1 flex-1 group">
-                      <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {point.value > 0 ? formatCurrency(point.value) : "—"}
-                      </span>
-                      <div
-                        className="w-full rounded-t-sm transition-all duration-300"
-                        style={{
-                          height: `${heightPct}%`,
-                          background:
-                            point.value > 0
-                              ? getAccent(i)
-                              : "rgba(34,197,94,0.15)",
-                        }}
-                        title={`${point.label}: ${formatCurrency(point.value)}`}
-                      />
-                      <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                        {/* Show 3-letter abbreviation on small screens */}
-                        {point.label.length > 3
-                          ? point.label.slice(0, 3)
-                          : point.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              <WeeklyComparisonChart
+                thisWeek={weeklyComparison.thisWeek}
+                lastWeek={weeklyComparison.lastWeek}
+              />
             )}
           </CardContent>
         </Card>
@@ -488,7 +829,56 @@ function AnalyticsDashboard({ vendorId }: { vendorId: string }) {
 // ─── Main page ────────────────────────────────────────────────────────────
 
 export function AnalyticsPage() {
-  const [activeVendorId, setActiveVendorId] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [searchRequestKey, setSearchRequestKey] = useState(0);
+  const [selectedVendor, setSelectedVendor] = useState<VendorOption | null>(null);
+  const [vendorOptions, setVendorOptions] = useState<VendorOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchVendors = async () => {
+      setOptionsLoading(true);
+      try {
+        const response = await apiService.getAllVendorSignups();
+        const vendors = Array.isArray(response?.data)
+          ? (response.data as VendorSignup[])
+              .map((vendor) => ({
+                vendorId: vendor.vendorId,
+                fullName: vendor.fullName || "",
+                emailAddress: vendor.emailAddress || "",
+              }))
+              .filter((vendor) => vendor.emailAddress)
+          : [];
+
+        if (!cancelled) {
+          setVendorOptions(vendors);
+        }
+      } catch (error) {
+        console.error("Failed to load vendor search options:", error);
+        if (!cancelled) {
+          setVendorOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setOptionsLoading(false);
+        }
+      }
+    };
+
+    fetchVendors();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSearch = (value: string, vendor?: VendorOption) => {
+    setActiveSearch(value);
+    setSelectedVendor(vendor ?? null);
+    setSearchRequestKey((k) => k + 1);
+  };
 
   return (
     <div className="space-y-6">
@@ -497,7 +887,7 @@ export function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Enter a vendor ID to view their store analytics
+            View general analytics and filter by vendor name or email
           </p>
         </div>
         <Button
@@ -511,28 +901,46 @@ export function AnalyticsPage() {
         </Button>
       </div>
 
-      {/* Vendor ID search */}
+      {/* Vendor search */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Vendor ID</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm font-medium">Vendor Search</label>
+              {activeSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSearch("");
+                    setSelectedVendor(null);
+                    setSearchRequestKey((k) => k + 1);
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Back to general analytics
+                </button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground -mt-1">
-              Paste a vendor's ID to load their performance data
+              Search a vendor by name or email to filter analytics
             </p>
             <VendorSearch
-              activeVendorId={activeVendorId}
-              onSearch={setActiveVendorId}
+              activeSearch={activeSearch}
+              vendorOptions={vendorOptions}
+              optionsLoading={optionsLoading}
+              onSearch={handleSearch}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Dashboard or empty prompt */}
-      {activeVendorId ? (
-        <AnalyticsDashboard key={activeVendorId} vendorId={activeVendorId} />
-      ) : (
-        <NoVendorState />
-      )}
+      <AnalyticsDashboard
+        key={activeSearch || "general"}
+        searchValue={activeSearch}
+        searchRequestKey={searchRequestKey}
+        selectedVendor={selectedVendor}
+      />
     </div>
   );
 }

@@ -588,6 +588,11 @@ export interface AnalyticsRevenueSeries {
   value: number;
 }
 
+export interface WeeklyRevenuePoint {
+  day: string;
+  revenue: number;
+}
+
 export interface AnalyticsCategoryItem {
   category: string;
   percentage: number;
@@ -628,6 +633,10 @@ export interface AnalyticsData {
   revenueSeries: {
     "7d": AnalyticsRevenueSeries[];
     "30d": AnalyticsRevenueSeries[];
+  };
+  weeklyRevenueComparison: {
+    thisWeek: WeeklyRevenuePoint[];
+    lastWeek: WeeklyRevenuePoint[];
   };
   salesByCategory: AnalyticsCategoryItem[];
   topSellingProducts: {

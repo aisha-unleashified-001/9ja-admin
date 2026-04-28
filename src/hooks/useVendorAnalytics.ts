@@ -9,22 +9,23 @@ interface UseVendorAnalyticsResult {
   refetch: () => void;
 }
 
-export function useVendorAnalytics(vendorId: string): UseVendorAnalyticsResult {
+export function useVendorAnalytics(
+  search: string,
+  requestKey = 0
+): UseVendorAnalyticsResult {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!vendorId) return;
-
     let cancelled = false;
 
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await apiService.getVendorAnalytics(vendorId);
+        const data = await apiService.getVendorAnalytics(search);
         if (!cancelled) {
           setAnalyticsData(data);
         }
@@ -46,7 +47,7 @@ export function useVendorAnalytics(vendorId: string): UseVendorAnalyticsResult {
     return () => {
       cancelled = true;
     };
-  }, [vendorId, tick]);
+  }, [search, requestKey, tick]);
 
   const refetch = () => setTick((t) => t + 1);
 

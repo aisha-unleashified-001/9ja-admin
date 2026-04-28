@@ -31,6 +31,7 @@ import type {
   AnalyticsCategoryItem,
   AnalyticsProductItem,
   AnalyticsCustomerInsight,
+  WeeklyRevenuePoint,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -662,14 +663,29 @@ class ApiService {
     );
   }
 
-  async getVendorAnalytics(vendorId: string): Promise<AnalyticsData> {
+  async getVendorAnalytics(search?: string): Promise<AnalyticsData> {
     try {
+      const params = new URLSearchParams();
+      const trimmedSearch = search?.trim();
+      if (trimmedSearch) {
+        params.append("search", trimmedSearch);
+        if (trimmedSearch.includes("@")) {
+          params.append("email", trimmedSearch);
+        } else {
+          params.append("name", trimmedSearch);
+        }
+      }
+
       const raw = await this.request<{
         status?: number;
         error?: boolean;
         message?: string;
         data?: Record<string, unknown>;
-      }>(`/backoffice/vendors/${vendorId}/analytics`);
+      }>(
+        `/backoffice/vendors/analytics/general${
+          params.toString() ? `?${params.toString()}` : ""
+        }`
+      );
 
       if (raw?.error) throw new Error(raw.message || "Analytics fetch failed");
       return normalizeAnalyticsPayload(
@@ -701,6 +717,77 @@ function toNum(val: unknown): number {
   return 0;
 }
 
+const WEEK_DAYS_MON_TO_SUN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function getMonIndexedDay(dayValue: unknown, dateValue?: unknown): string | null {
+  const normalizedDay = String(dayValue ?? "").trim().toLowerCase();
+  const dayMap: Record<string, string> = {
+    monday: "Mon",
+    mon: "Mon",
+    tuesday: "Tue",
+    tue: "Tue",
+    tues: "Tue",
+    wednesday: "Wed",
+    wed: "Wed",
+    thursday: "Thu",
+    thu: "Thu",
+    thur: "Thu",
+    thurs: "Thu",
+    friday: "Fri",
+    fri: "Fri",
+    saturday: "Sat",
+    sat: "Sat",
+    sunday: "Sun",
+    sun: "Sun",
+  };
+
+  if (normalizedDay && dayMap[normalizedDay]) {
+    return dayMap[normalizedDay];
+  }
+
+  if (typeof dateValue === "string" && dateValue.trim()) {
+    const parsed = new Date(dateValue);
+    if (!isNaN(parsed.getTime())) {
+      const jsDay = parsed.getDay(); // 0 (Sun) -> 6 (Sat)
+      const mondayIndex = (jsDay + 6) % 7; // 0 (Mon) -> 6 (Sun)
+      return WEEK_DAYS_MON_TO_SUN[mondayIndex];
+    }
+  }
+
+  return null;
+}
+
+function buildAlignedWeekSeries(
+  source: unknown[],
+  fallback?: unknown[]
+): WeeklyRevenuePoint[] {
+  const buckets = new Map<string, number>(
+    WEEK_DAYS_MON_TO_SUN.map((day) => [day, 0])
+  );
+
+  const ingest = (rows?: unknown[]) => {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => {
+      const item = row as Record<string, unknown>;
+      const normalizedDay = getMonIndexedDay(item.day ?? item.label, item.date);
+      if (!normalizedDay) return;
+      const current = buckets.get(normalizedDay) ?? 0;
+      buckets.set(normalizedDay, current + toNum(item.revenue ?? item.value ?? item.amount));
+    });
+  };
+
+  ingest(source);
+  const hasValues = [...buckets.values()].some((value) => value > 0);
+  if (!hasValues && Array.isArray(fallback)) {
+    ingest(fallback);
+  }
+
+  return WEEK_DAYS_MON_TO_SUN.map((day) => ({
+    day,
+    revenue: buckets.get(day) ?? 0,
+  }));
+}
+
 export function getAnalyticsDefaults(): AnalyticsData {
   return {
     inventorySnapshot: {
@@ -715,7 +802,14 @@ export function getAnalyticsDefaults(): AnalyticsData {
       avgOrderValue: 0,
       conversionRate: 0,
     },
-    revenueSeries: { "7d": [], "30d": [] },
+    revenueSeries: {
+      "7d": WEEK_DAYS_MON_TO_SUN.map((day) => ({ label: day, value: 0 })),
+      "30d": [],
+    },
+    weeklyRevenueComparison: {
+      thisWeek: WEEK_DAYS_MON_TO_SUN.map((day) => ({ day, revenue: 0 })),
+      lastWeek: WEEK_DAYS_MON_TO_SUN.map((day) => ({ day, revenue: 0 })),
+    },
     salesByCategory: [],
     topSellingProducts: { "7d": [], "30d": [] },
     customerInsights: {
@@ -785,9 +879,22 @@ function normalizeAnalyticsPayload(
 
   // ── Weekly revenue chart ────────────────────────────────────────────────
   const weeklyOverview = (data.weeklyRevenueOverview ?? {}) as Record<string, unknown>;
+  const thisWeekRaw = Array.isArray(weeklyOverview.thisWeek)
+    ? weeklyOverview.thisWeek
+    : Array.isArray(data.thisWeek)
+    ? (data.thisWeek as unknown[])
+    : [];
+  const lastWeekRaw = Array.isArray(weeklyOverview.lastWeek)
+    ? weeklyOverview.lastWeek
+    : Array.isArray(data.lastWeek)
+    ? (data.lastWeek as unknown[])
+    : [];
   const dailyBreakdown = Array.isArray(weeklyOverview.dailyBreakdown)
     ? weeklyOverview.dailyBreakdown
     : [];
+
+  const thisWeekAligned = buildAlignedWeekSeries(thisWeekRaw, dailyBreakdown);
+  const lastWeekAligned = buildAlignedWeekSeries(lastWeekRaw);
 
   const seriesRaw = (data.revenueSeries ?? {}) as Record<string, unknown>;
 
@@ -804,7 +911,9 @@ function normalizeAnalyticsPayload(
       .filter((s) => !isNaN(s.value));
 
   const revenueSeries7d: AnalyticsRevenueSeries[] =
-    dailyBreakdown.length > 0
+    thisWeekAligned.some((point) => point.revenue > 0)
+      ? thisWeekAligned.map((point) => ({ label: point.day, value: point.revenue }))
+      : dailyBreakdown.length > 0
       ? mapSeriesItems(dailyBreakdown)
       : Array.isArray(seriesRaw["7d"])
       ? mapSeriesItems(seriesRaw["7d"] as unknown[])
@@ -919,6 +1028,10 @@ function normalizeAnalyticsPayload(
     inventorySnapshot,
     summaryCards,
     revenueSeries: { "7d": revenueSeries7d, "30d": revenueSeries30d },
+    weeklyRevenueComparison: {
+      thisWeek: thisWeekAligned,
+      lastWeek: lastWeekAligned,
+    },
     salesByCategory,
     topSellingProducts: { "7d": products, "30d": products },
     customerInsights: { "7d": insight, "30d": insight },
