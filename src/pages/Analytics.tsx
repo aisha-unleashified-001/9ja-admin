@@ -38,10 +38,10 @@ const formatCurrency = (value: number): string =>
 const formatNumber = (value: number): string =>
   new Intl.NumberFormat("en-NG").format(value);
 
+// Primary brand colour: #1E4700 → rgb(30, 71, 0)
 const getAccent = (index: number): string => {
   const opacities = [1, 0.82, 0.65, 0.5, 0.38, 0.28];
-  const pct = Math.round(opacities[index % opacities.length] * 100);
-  return `color-mix(in oklch, var(--primary) ${pct}%, transparent)`;
+  return `rgba(30, 71, 0, ${opacities[index % opacities.length]})`;
 };
 
 const WEEK_DAYS_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -121,6 +121,7 @@ interface VendorOption {
   vendorId: string;
   fullName: string;
   emailAddress: string;
+  storeName: string;
 }
 
 // ─── Vendor search bar ────────────────────────────────────────────────────
@@ -155,8 +156,11 @@ function VendorSearch({
       .filter((vendor) => {
         const name = vendor.fullName?.toLowerCase() ?? "";
         const email = vendor.emailAddress?.toLowerCase() ?? "";
+        const store = vendor.storeName?.toLowerCase() ?? "";
         return (
-          name.includes(normalizedQuery) || email.includes(normalizedQuery)
+          name.includes(normalizedQuery) ||
+          email.includes(normalizedQuery) ||
+          store.includes(normalizedQuery)
         );
       })
       .slice(0, 8);
@@ -173,10 +177,11 @@ function VendorSearch({
     }
 
     const exactMatch = vendorOptions.find((vendor) => {
-      const name = vendor.fullName?.trim().toLowerCase();
-      const email = vendor.emailAddress?.trim().toLowerCase();
+      const t = trimmed.toLowerCase();
       return (
-        name === trimmed.toLowerCase() || email === trimmed.toLowerCase()
+        vendor.fullName?.trim().toLowerCase() === t ||
+        vendor.emailAddress?.trim().toLowerCase() === t ||
+        (vendor.storeName?.trim().toLowerCase() ?? "") === t
       );
     });
 
@@ -207,15 +212,21 @@ function VendorSearch({
           ref={inputRef}
           value={value}
           onChange={(e) => {
-            setValue(e.target.value);
+            const next = e.target.value;
+            setValue(next);
             setSelectedVendor(null);
-            setShowSuggestions(true);
+            if (next === "") {
+              onSearch("");
+              setShowSuggestions(false);
+            } else {
+              setShowSuggestions(true);
+            }
           }}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => {
             setTimeout(() => setShowSuggestions(false), 120);
           }}
-          placeholder="Search vendor by name or email..."
+          placeholder="Search by name, store name or email..."
           className="pl-9 text-sm"
         />
         {showSuggestions && normalizedQuery ? (
@@ -240,6 +251,11 @@ function VendorSearch({
                     >
                       <p className="text-sm font-medium text-foreground truncate">
                         {vendor.fullName || "Unnamed Vendor"}
+                        {vendor.storeName && (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            · {vendor.storeName}
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {vendor.emailAddress}
@@ -306,9 +322,6 @@ function WeeklyComparisonChart({
   const hasThisWeek = thisWeek.some((p) => p.revenue > 0);
   const hasLastWeek = lastWeek.some((p) => p.revenue > 0);
 
-  if (!hasThisWeek && !hasLastWeek) {
-    return <EmptyState message="No comparison data available." />;
-  }
 
   return (
     <div>
@@ -453,19 +466,31 @@ function AnalyticsDashboard({
   );
   const data = analyticsData ?? getAnalyticsDefaults();
 
-  // Revenue chart uses "7d" series (mapped from weeklyRevenueOverview.dailyBreakdown)
-  const revenueSeries = data.revenueSeries["7d"];
-  const revenueValues = revenueSeries.map((s) => s.value);
-  const highestRevenue = Math.max(...revenueValues, 1);
-  const totalWeeklyRevenue = revenueValues.reduce((sum, v) => sum + v, 0);
+  const [chartMode, setChartMode] = useState<"bar" | "compare">("bar");
+
+  // Revenue chart — always show 7 bars (Mon–Sun).
+  // Fall back to zero-value placeholders when the API returns nothing.
+  const revenueSeries = data.revenueSeries["7d"] ?? [];
+  const chartSeries =
+    revenueSeries.length > 0
+      ? revenueSeries
+      : (WEEK_DAYS_LABELS as readonly string[]).map((day) => ({ label: day, value: 0 }));
+  // Safe divisor: always ≥ 1 so bar heights never produce NaN/Infinity.
+  const chartPeak = chartSeries.reduce((max, s) => Math.max(max, s.value), 1);
+  const isChartEmpty = !chartSeries.some((s) => s.value > 0);
+  const totalWeeklyRevenue = chartSeries.reduce((sum, s) => sum + s.value, 0);
+
+  // Defensive fallback so the component never crashes if older API data
+  // doesn't include weeklyRevenueComparison yet.
+  const weeklyComparison = data.weeklyRevenueComparison ?? {
+    thisWeek: (WEEK_DAYS_LABELS as readonly string[]).map((day) => ({ day, revenue: 0 })),
+    lastWeek: (WEEK_DAYS_LABELS as readonly string[]).map((day) => ({ day, revenue: 0 })),
+  };
+  const thisWeekTotal = weeklyComparison.thisWeek.reduce((sum, p) => sum + p.revenue, 0);
+  const lastWeekTotal = weeklyComparison.lastWeek.reduce((sum, p) => sum + p.revenue, 0);
 
   const insight = data.customerInsights["7d"];
   const topProducts = data.topSellingProducts["7d"];
-
-  const [chartMode, setChartMode] = useState<"bar" | "compare">("bar");
-  const weeklyComparison = data.weeklyRevenueComparison;
-  const thisWeekTotal = weeklyComparison.thisWeek.reduce((sum, p) => sum + p.revenue, 0);
-  const lastWeekTotal = weeklyComparison.lastWeek.reduce((sum, p) => sum + p.revenue, 0);
 
   // ── Skeleton ──
   if (isLoading) {
@@ -511,7 +536,9 @@ function AnalyticsDashboard({
           <span>Filtered by</span>
           {selectedVendor ? (
             <code className="bg-muted px-1.5 py-0.5 rounded">
-              {selectedVendor.fullName} ({selectedVendor.emailAddress})
+              {selectedVendor.fullName}
+              {selectedVendor.storeName ? ` · ${selectedVendor.storeName}` : ""}
+              {" "}({selectedVendor.emailAddress})
             </code>
           ) : (
             <code className="bg-muted px-1.5 py-0.5 rounded">{searchValue}</code>
@@ -623,41 +650,45 @@ function AnalyticsDashboard({
           </CardHeader>
           <CardContent>
             {chartMode === "bar" ? (
-              revenueSeries.length === 0 ? (
-                <EmptyState message="No weekly revenue data available." />
-              ) : (
-                <div className="flex items-end gap-2 h-48 pt-4">
-                  {revenueSeries.map((point, i) => {
-                    const heightPct = Math.max(
-                      (point.value / highestRevenue) * 100,
-                      8
-                    );
-                    return (
-                      <div key={i} className="flex flex-col items-center gap-1 flex-1 group">
-                        <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {point.value > 0 ? formatCurrency(point.value) : "—"}
-                        </span>
-                        <div
-                          className="w-full rounded-t-sm transition-all duration-300"
-                          style={{
-                            height: `${heightPct}%`,
-                            background:
-                              point.value > 0
-                                ? getAccent(i)
-                                : "color-mix(in oklch, var(--primary) 15%, transparent)",
-                          }}
-                          title={`${point.label}: ${formatCurrency(point.value)}`}
-                        />
-                        <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                          {point.label.length > 3
-                            ? point.label.slice(0, 3)
-                            : point.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )
+              /* BAR_MAX_PX: h-48 (192px) minus pt-4 (16px) top padding, minus
+                 ~18px for the value label and ~18px for the day label = 140px
+                 usable bar area. Pixel heights are used instead of % because
+                 the column div has no explicit height to resolve against. */
+              <div className="flex items-end gap-2 h-48 pt-2">
+                {chartSeries.map((point, i) => {
+                  const BAR_MAX_PX = 130;
+                  const barHeightPx = isChartEmpty
+                    ? 44
+                    : Math.max(Math.round((point.value / chartPeak) * BAR_MAX_PX), 10);
+                  const barBg = isChartEmpty
+                    ? `rgba(30, 71, 0, 0.40)`
+                    : point.value > 0
+                    ? getAccent(i)
+                    : `rgba(30, 71, 0, 0.18)`;
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                      <span className="text-[10px] font-medium text-foreground whitespace-nowrap tabular-nums">
+                        {point.value > 0 ? formatCurrency(point.value) : "—"}
+                      </span>
+                      <div
+                        className="w-full rounded-t-sm transition-all duration-300"
+                        style={{
+                          height: `${barHeightPx}px`,
+                          background: barBg,
+                        }}
+                        title={
+                          point.value > 0
+                            ? `${point.label}: ${formatCurrency(point.value)}`
+                            : point.label
+                        }
+                      />
+                      <span className="text-[10px] text-muted-foreground truncate max-w-full">
+                        {point.label.slice(0, 3)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <WeeklyComparisonChart
                 thisWeek={weeklyComparison.thisWeek}
@@ -849,6 +880,7 @@ export function AnalyticsPage() {
                 vendorId: vendor.vendorId,
                 fullName: vendor.fullName || "",
                 emailAddress: vendor.emailAddress || "",
+                storeName: vendor.storeName || "",
               }))
               .filter((vendor) => vendor.emailAddress)
           : [];
@@ -924,7 +956,7 @@ export function AnalyticsPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground -mt-1">
-              Search a vendor by name or email to filter analytics
+              Search a vendor by name, store name or email to filter analytics
             </p>
             <VendorSearch
               activeSearch={activeSearch}
