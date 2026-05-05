@@ -111,6 +111,41 @@ export interface TicketMessagesResponse {
   messages: TicketMessage[];
 }
 
+export interface Coupon {
+  id?: number;
+  code: string;
+  description?: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  minOrderAmount?: number;
+  maxDiscountAmount?: number;
+  usageLimit?: number;
+  usedCount?: number;
+  validFrom: string;
+  validUntil: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CouponPayload {
+  code: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  discountValue: number;
+  validFrom: string;
+  validUntil: string;
+}
+
+export interface CouponsResponse {
+  data: Coupon[];
+  pagination: {
+    currentPage: number;
+    perPage: number;
+    totalPages: number;
+    totalItems: number;
+  };
+}
+
 export interface BuyerMessage {
   id: string;
   name: string;

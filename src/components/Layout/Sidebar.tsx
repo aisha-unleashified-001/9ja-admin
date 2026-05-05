@@ -15,6 +15,7 @@ import {
   Percent,
   UserCheck,
   BarChart2,
+  Ticket,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/Button";
@@ -68,6 +69,7 @@ const navigation = [
     href: "/dashboard/commission-change",
     icon: Percent,
   },
+  { name: "Coupons", href: "/dashboard/coupons", icon: Ticket },
   { name: "Waitlist", href: "/dashboard/waitlist", icon: Users },
   { name: "Contacts", href: "/dashboard/contacts", icon: MessageSquare },
 ];

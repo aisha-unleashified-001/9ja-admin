@@ -32,6 +32,9 @@ import type {
   AnalyticsProductItem,
   AnalyticsCustomerInsight,
   WeeklyRevenuePoint,
+  Coupon,
+  CouponPayload,
+  CouponsResponse,
 } from "../types/api";
 import { config } from "../config/env";
 import { useAuthStore } from "../stores/authStore";
@@ -703,6 +706,41 @@ class ApiService {
       }
       return getAnalyticsDefaults();
     }
+  }
+
+  // Coupons
+  async getCoupons(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    discountType?: string;
+  }): Promise<CouponsResponse> {
+    const query = new URLSearchParams();
+    if (params.page !== undefined) query.set("page", String(params.page));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.search) query.set("search", params.search);
+    if (params.discountType) query.set("discountType", params.discountType);
+    return this.request<CouponsResponse>(`/backoffice/coupon?${query.toString()}`);
+  }
+
+  async createCoupon(payload: CouponPayload): Promise<ApiResponse<Coupon>> {
+    return this.request<ApiResponse<Coupon>>("/backoffice/coupon/create", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async updateCoupon(identifier: string | number, payload: CouponPayload): Promise<ApiResponse<Coupon>> {
+    return this.request<ApiResponse<Coupon>>(`/backoffice/coupon/${identifier}/update`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async toggleCouponStatus(identifier: string | number): Promise<ApiResponse<Coupon>> {
+    return this.request<ApiResponse<Coupon>>(`/backoffice/coupon/${identifier}/toggle`, {
+      method: "POST",
+    });
   }
 }
 

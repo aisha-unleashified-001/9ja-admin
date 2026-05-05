@@ -34,6 +34,7 @@ import { useAuthCheck } from "./hooks/useAuthCheck";
 import { Toast } from "./components/ui/Toast";
 import OrdersPage from "./pages/Orders";
 import { AnalyticsPage } from "./pages/Analytics";
+import { Coupons } from "./pages/Coupons";
 
 function App() {
   const { initializeAuth } = useAuthStore();
@@ -93,6 +94,7 @@ function App() {
             element={<ProductCategoryDetail />}
           />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="coupons" element={<Coupons />} />
         </Route>
       </Routes>
       <Toast />
