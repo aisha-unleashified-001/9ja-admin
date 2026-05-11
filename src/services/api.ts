@@ -916,20 +916,47 @@ function normalizeAnalyticsPayload(
   };
 
   // ── Weekly revenue chart ────────────────────────────────────────────────
+  // General analytics may send currentWeekRevenue / lastWeekRevenue (each with
+  // dailyBreakdown) instead of weeklyRevenueOverview.thisWeek / .lastWeek.
+  const currentWeekRevenue = (data.currentWeekRevenue ?? {}) as Record<string, unknown>;
+  const lastWeekRevenue = (data.lastWeekRevenue ?? {}) as Record<string, unknown>;
+  const currentWeekDaily = Array.isArray(currentWeekRevenue.dailyBreakdown)
+    ? (currentWeekRevenue.dailyBreakdown as unknown[])
+    : [];
+  const lastWeekDaily = Array.isArray(lastWeekRevenue.dailyBreakdown)
+    ? (lastWeekRevenue.dailyBreakdown as unknown[])
+    : [];
+
   const weeklyOverview = (data.weeklyRevenueOverview ?? {}) as Record<string, unknown>;
-  const thisWeekRaw = Array.isArray(weeklyOverview.thisWeek)
-    ? weeklyOverview.thisWeek
+  const legacyThisWeek = Array.isArray(weeklyOverview.thisWeek)
+    ? (weeklyOverview.thisWeek as unknown[])
     : Array.isArray(data.thisWeek)
     ? (data.thisWeek as unknown[])
-    : [];
-  const lastWeekRaw = Array.isArray(weeklyOverview.lastWeek)
-    ? weeklyOverview.lastWeek
+    : undefined;
+  const legacyLastWeek = Array.isArray(weeklyOverview.lastWeek)
+    ? (weeklyOverview.lastWeek as unknown[])
     : Array.isArray(data.lastWeek)
     ? (data.lastWeek as unknown[])
-    : [];
-  const dailyBreakdown = Array.isArray(weeklyOverview.dailyBreakdown)
-    ? weeklyOverview.dailyBreakdown
-    : [];
+    : undefined;
+
+  const thisWeekRaw =
+    legacyThisWeek && legacyThisWeek.length > 0
+      ? legacyThisWeek
+      : currentWeekDaily.length > 0
+      ? currentWeekDaily
+      : legacyThisWeek ?? [];
+  const lastWeekRaw =
+    legacyLastWeek && legacyLastWeek.length > 0
+      ? legacyLastWeek
+      : lastWeekDaily.length > 0
+      ? lastWeekDaily
+      : legacyLastWeek ?? [];
+
+  const dailyBreakdown =
+    Array.isArray(weeklyOverview.dailyBreakdown) &&
+    (weeklyOverview.dailyBreakdown as unknown[]).length > 0
+      ? (weeklyOverview.dailyBreakdown as unknown[])
+      : currentWeekDaily;
 
   const thisWeekAligned = buildAlignedWeekSeries(thisWeekRaw, dailyBreakdown);
   const lastWeekAligned = buildAlignedWeekSeries(lastWeekRaw);

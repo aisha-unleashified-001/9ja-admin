@@ -20,6 +20,34 @@ import { cn } from "../lib/utils";
 const DISCOUNT_TYPES = ["", "PERCENTAGE", "FIXED"] as const;
 const LIMIT = 20;
 
+/** API / ISO string → value for `<input type="datetime-local" />` (local wall clock). */
+function toDateTimeLocalValue(isoLike: string): string {
+  if (!isoLike) return "";
+  const d = new Date(isoLike);
+  if (isNaN(d.getTime())) {
+    const m = String(isoLike).match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? `${m[1]}T00:00` : "";
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** `datetime-local` value → ISO string for the API. */
+function fromDateTimeLocalValue(local: string): string {
+  if (!local) return "";
+  const d = new Date(local);
+  if (isNaN(d.getTime())) return local;
+  return d.toISOString();
+}
+
+/** Earliest selectable moment: local midnight today (for `datetime-local` min). */
+function getTodayDateTimeLocalMin(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
+}
+
 const emptyForm: CouponPayload = {
   code: "",
   discountType: "PERCENTAGE",
@@ -49,6 +77,12 @@ export function Coupons() {
   const [formErrors, setFormErrors] = useState<Partial<CouponPayload>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingCode, setTogglingCode] = useState<string | null>(null);
+
+  const todayDateTimeMin = getTodayDateTimeLocalMin();
+  const validUntilFloor =
+    form.validFrom && form.validFrom >= todayDateTimeMin
+      ? form.validFrom
+      : todayDateTimeMin;
 
   // Debounce search
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,8 +167,8 @@ export function Coupons() {
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
-      validFrom: coupon.validFrom?.slice(0, 10) ?? "",
-      validUntil: coupon.validUntil?.slice(0, 10) ?? "",
+      validFrom: toDateTimeLocalValue(coupon.validFrom ?? ""),
+      validUntil: toDateTimeLocalValue(coupon.validUntil ?? ""),
     });
     setFormErrors({});
     setModalOpen(true);
@@ -149,13 +183,27 @@ export function Coupons() {
 
   const validateForm = (): boolean => {
     const errors: Partial<CouponPayload> = {};
+    const todayMin = getTodayDateTimeLocalMin();
     if (!form.code.trim()) errors.code = "Code is required";
     if (!form.discountValue || form.discountValue <= 0)
       errors.discountValue = 0; // Marker for error — handled in JSX
     if (!form.validFrom) errors.validFrom = "Valid from date is required";
     if (!form.validUntil) errors.validUntil = "Valid until date is required";
-    if (form.validFrom && form.validUntil && form.validFrom >= form.validUntil)
-      errors.validUntil = "Valid until must be after valid from";
+    if (!editingCoupon) {
+      if (form.validFrom && form.validFrom < todayMin) {
+        errors.validFrom = "Start cannot be before today";
+      }
+      if (form.validUntil && form.validUntil < todayMin) {
+        errors.validUntil = "End cannot be before today";
+      }
+    }
+    if (form.validFrom && form.validUntil) {
+      const fromMs = new Date(form.validFrom).getTime();
+      const untilMs = new Date(form.validUntil).getTime();
+      if (!isNaN(fromMs) && !isNaN(untilMs) && untilMs <= fromMs) {
+        errors.validUntil = "Valid until must be after valid from";
+      }
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -166,12 +214,17 @@ export function Coupons() {
 
     setIsSubmitting(true);
     try {
+      const payload: CouponPayload = {
+        ...form,
+        validFrom: fromDateTimeLocalValue(form.validFrom),
+        validUntil: fromDateTimeLocalValue(form.validUntil),
+      };
       if (editingCoupon) {
         const identifier = editingCoupon.id ?? editingCoupon.code;
-        await apiService.updateCoupon(identifier, form);
+        await apiService.updateCoupon(identifier, payload);
         toast.success("Coupon updated successfully");
       } else {
-        await apiService.createCoupon(form);
+        await apiService.createCoupon(payload);
         toast.success("Coupon created successfully");
       }
       closeModal();
@@ -201,13 +254,22 @@ export function Coupons() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDateTime = (dateStr: string) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-NG", {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-NG", {
       year: "numeric",
       month: "short",
       day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
+  };
+
+  const formatValidityRange = (from: string, until: string) => {
+    if (!from && !until) return "—";
+    return `${formatDateTime(from)} → ${formatDateTime(until)}`;
   };
 
   const formatDiscount = (coupon: Coupon) => {
@@ -319,11 +381,8 @@ export function Coupons() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   Discount
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Valid From
-                </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">
-                  Valid Until
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground min-w-[220px]">
+                  Timing range
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">
                   Status
@@ -337,7 +396,7 @@ export function Coupons() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 bg-muted animate-pulse rounded" />
                       </td>
@@ -346,7 +405,7 @@ export function Coupons() {
                 ))
               ) : coupons.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <Ticket className="h-10 w-10 opacity-30" />
                       <p className="font-medium">No coupons found</p>
@@ -384,11 +443,8 @@ export function Coupons() {
                     <td className="px-4 py-3 font-medium">
                       {formatDiscount(coupon)}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatDate(coupon.validFrom)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatDate(coupon.validUntil)}
+                    <td className="px-4 py-3 text-muted-foreground text-xs leading-relaxed whitespace-normal">
+                      {formatValidityRange(coupon.validFrom, coupon.validUntil)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -578,53 +634,87 @@ export function Coupons() {
                 )}
               </div>
 
-              {/* Date range */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Valid From <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={form.validFrom}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, validFrom: e.target.value }))
-                    }
-                    className={cn(
-                      "w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring",
-                      formErrors.validFrom
-                        ? "border-destructive"
-                        : "border-input"
+              {/* Timing range (date & time) */}
+              <div>
+                <p className="text-sm font-medium mb-2">Timing range</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Dates before today are not available. Start must not be after end; each picker
+                  respects the other field.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Valid from <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={form.validFrom}
+                      min={todayDateTimeMin}
+                      max={form.validUntil || undefined}
+                      onChange={(e) => {
+                        let validFrom = e.target.value;
+                        if (validFrom && validFrom < todayDateTimeMin) {
+                          validFrom = todayDateTimeMin;
+                        }
+                        setForm((f) => {
+                          let validUntil = f.validUntil;
+                          if (validUntil && validFrom && validUntil < validFrom) {
+                            validUntil = validFrom;
+                          }
+                          return { ...f, validFrom, validUntil };
+                        });
+                      }}
+                      className={cn(
+                        "w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring",
+                        formErrors.validFrom
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                    />
+                    {formErrors.validFrom && (
+                      <p className="text-xs text-destructive mt-1">
+                        {formErrors.validFrom}
+                      </p>
                     )}
-                  />
-                  {formErrors.validFrom && (
-                    <p className="text-xs text-destructive mt-1">
-                      {formErrors.validFrom}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Valid Until <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={form.validUntil}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, validUntil: e.target.value }))
-                    }
-                    className={cn(
-                      "w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring",
-                      formErrors.validUntil
-                        ? "border-destructive"
-                        : "border-input"
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Valid until <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={form.validUntil}
+                      min={validUntilFloor}
+                      onChange={(e) => {
+                        let validUntil = e.target.value;
+                        setForm((f) => {
+                          const floor =
+                            f.validFrom && f.validFrom >= todayDateTimeMin
+                              ? f.validFrom
+                              : todayDateTimeMin;
+                          if (validUntil && validUntil < floor) {
+                            validUntil = floor;
+                          }
+                          let validFrom = f.validFrom;
+                          if (validFrom && validUntil && validUntil < validFrom) {
+                            validFrom = validUntil;
+                          }
+                          return { ...f, validFrom, validUntil };
+                        });
+                      }}
+                      className={cn(
+                        "w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring",
+                        formErrors.validUntil
+                          ? "border-destructive"
+                          : "border-input"
+                      )}
+                    />
+                    {formErrors.validUntil && (
+                      <p className="text-xs text-destructive mt-1">
+                        {formErrors.validUntil}
+                      </p>
                     )}
-                  />
-                  {formErrors.validUntil && (
-                    <p className="text-xs text-destructive mt-1">
-                      {formErrors.validUntil}
-                    </p>
-                  )}
+                  </div>
                 </div>
               </div>
 
