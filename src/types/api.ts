@@ -123,6 +123,8 @@ export interface Coupon {
   usedCount?: number;
   validFrom: string;
   validUntil: string;
+  /** Product category UUID (same value sent as `productCategory` on create/update). */
+  productCategory?: string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -134,6 +136,8 @@ export interface CouponPayload {
   discountValue: number;
   validFrom: string;
   validUntil: string;
+  /** Product category UUID */
+  productCategory: string;
 }
 
 export interface CouponsResponse {

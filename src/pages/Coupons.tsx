@@ -13,7 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { apiService } from "../services/api";
-import type { Coupon, CouponPayload } from "../types/api";
+import type { Coupon, CouponPayload, ProductCategory } from "../types/api";
 import toast from "react-hot-toast";
 import { cn } from "../lib/utils";
 
@@ -23,21 +23,36 @@ const LIMIT = 20;
 /** API / ISO string → value for `<input type="datetime-local" />` (local wall clock). */
 function toDateTimeLocalValue(isoLike: string): string {
   if (!isoLike) return "";
-  const d = new Date(isoLike);
+  const raw = String(isoLike).trim();
+  const naiveSql = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+  );
+  const d = naiveSql
+    ? new Date(
+        Number(naiveSql[1]),
+        Number(naiveSql[2]) - 1,
+        Number(naiveSql[3]),
+        Number(naiveSql[4]),
+        Number(naiveSql[5]),
+        Number(naiveSql[6]),
+        0
+      )
+    : new Date(raw);
   if (isNaN(d.getTime())) {
-    const m = String(isoLike).match(/^(\d{4}-\d{2}-\d{2})/);
+    const m = raw.match(/^(\d{4}-\d{2}-\d{2})/);
     return m ? `${m[1]}T00:00` : "";
   }
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** `datetime-local` value → ISO string for the API. */
+/** `datetime-local` value → API datetime (`Y-m-d H:i:s`, local wall clock). Many PHP/Laravel stacks reject ISO `T`/`Z` in `date_format` / strict parsers. */
 function fromDateTimeLocalValue(local: string): string {
   if (!local) return "";
   const d = new Date(local);
   if (isNaN(d.getTime())) return local;
-  return d.toISOString();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 /** Earliest selectable moment: local midnight today (for `datetime-local` min). */
@@ -54,6 +69,7 @@ const emptyForm: CouponPayload = {
   discountValue: 0,
   validFrom: "",
   validUntil: "",
+  productCategory: "",
 };
 
 export function Coupons() {
@@ -77,6 +93,8 @@ export function Coupons() {
   const [formErrors, setFormErrors] = useState<Partial<CouponPayload>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [togglingCode, setTogglingCode] = useState<string | null>(null);
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   const todayDateTimeMin = getTodayDateTimeLocalMin();
   const validUntilFloor =
@@ -111,6 +129,7 @@ export function Coupons() {
       const list: Coupon[] = rawList.map((c) => ({
         ...c,
         id: c.id ?? c.couponId ?? c.coupon_id ?? c.ID ?? undefined,
+        productCategory: c.productCategory ?? c.product_category ?? undefined,
       }));
 
       setCoupons(list);
@@ -143,6 +162,29 @@ export function Coupons() {
     }, 400);
   };
 
+  useEffect(() => {
+    if (!modalOpen) return;
+    let cancelled = false;
+    setCategoriesLoading(true);
+    (async () => {
+      try {
+        const res = await apiService.getAllProductCategories();
+        if (cancelled) return;
+        setProductCategories(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        if (!cancelled) {
+          setProductCategories([]);
+          toast.error("Could not load product categories");
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [modalOpen]);
+
   // Close filter menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -169,6 +211,7 @@ export function Coupons() {
       discountValue: coupon.discountValue,
       validFrom: toDateTimeLocalValue(coupon.validFrom ?? ""),
       validUntil: toDateTimeLocalValue(coupon.validUntil ?? ""),
+      productCategory: coupon.productCategory ?? "",
     });
     setFormErrors({});
     setModalOpen(true);
@@ -187,6 +230,8 @@ export function Coupons() {
     if (!form.code.trim()) errors.code = "Code is required";
     if (!form.discountValue || form.discountValue <= 0)
       errors.discountValue = 0; // Marker for error — handled in JSX
+    if (!form.productCategory?.trim())
+      errors.productCategory = "Product category is required";
     if (!form.validFrom) errors.validFrom = "Valid from date is required";
     if (!form.validUntil) errors.validUntil = "Valid until date is required";
     if (!editingCoupon) {
@@ -216,8 +261,10 @@ export function Coupons() {
     try {
       const payload: CouponPayload = {
         ...form,
+        code: form.code.trim(),
         validFrom: fromDateTimeLocalValue(form.validFrom),
         validUntil: fromDateTimeLocalValue(form.validUntil),
+        productCategory: form.productCategory.trim(),
       };
       if (editingCoupon) {
         const identifier = editingCoupon.id ?? editingCoupon.code;
@@ -634,13 +681,53 @@ export function Coupons() {
                 )}
               </div>
 
+              {/* Product category (UUID expected by API) */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Product category <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={form.productCategory}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, productCategory: e.target.value }))
+                  }
+                  disabled={categoriesLoading}
+                  className={cn(
+                    "w-full px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60",
+                    formErrors.productCategory
+                      ? "border-destructive"
+                      : "border-input"
+                  )}
+                >
+                  <option value="">
+                    {categoriesLoading
+                      ? "Loading categories..."
+                      : "Select a product category"}
+                  </option>
+                  {form.productCategory &&
+                    !productCategories.some(
+                      (c) => c.categoryId === form.productCategory
+                    ) && (
+                      <option value={form.productCategory}>
+                        Current: {form.productCategory}
+                      </option>
+                    )}
+                  {productCategories.map((cat) => (
+                    <option key={cat.categoryId} value={cat.categoryId}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.productCategory && (
+                  <p className="text-xs text-destructive mt-1">
+                    {formErrors.productCategory}
+                  </p>
+                )}
+              </div>
+
               {/* Timing range (date & time) */}
               <div>
                 <p className="text-sm font-medium mb-2">Timing range</p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Dates before today are not available. Start must not be after end; each picker
-                  respects the other field.
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
