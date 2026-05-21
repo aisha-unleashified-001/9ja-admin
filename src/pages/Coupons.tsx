@@ -16,6 +16,7 @@ import { apiService } from "../services/api";
 import type { Coupon, CouponPayload, ProductCategory } from "../types/api";
 import toast from "react-hot-toast";
 import { cn } from "../lib/utils";
+import { getCouponErrorMessage } from "../lib/couponErrors";
 
 const DISCOUNT_TYPES = ["", "PERCENTAGE", "FIXED"] as const;
 const LIMIT = 20;
@@ -141,8 +142,7 @@ export function Coupons() {
         totalItems: Number(pag?.total ?? pag?.totalItems ?? list.length),
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load coupons";
-      toast.error(msg);
+      toast.error(getCouponErrorMessage(err, "load"));
     } finally {
       setIsLoading(false);
     }
@@ -171,10 +171,10 @@ export function Coupons() {
         const res = await apiService.getAllProductCategories();
         if (cancelled) return;
         setProductCategories(Array.isArray(res.data) ? res.data : []);
-      } catch {
+      } catch (err) {
         if (!cancelled) {
           setProductCategories([]);
-          toast.error("Could not load product categories");
+          toast.error(getCouponErrorMessage(err, "categories"));
         }
       } finally {
         if (!cancelled) setCategoriesLoading(false);
@@ -277,8 +277,9 @@ export function Coupons() {
       closeModal();
       fetchCoupons(page, search, discountTypeFilter);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Operation failed";
-      toast.error(msg);
+      toast.error(
+        getCouponErrorMessage(err, editingCoupon ? "update" : "create")
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -294,8 +295,7 @@ export function Coupons() {
       );
       fetchCoupons(page, search, discountTypeFilter);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to toggle coupon";
-      toast.error(msg);
+      toast.error(getCouponErrorMessage(err, "toggle"));
     } finally {
       setTogglingCode(null);
     }
