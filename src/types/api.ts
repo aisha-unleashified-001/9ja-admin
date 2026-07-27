@@ -275,6 +275,10 @@ export interface VendorSignup {
   isSuspended: string; // "0" or "1"
   suspendedAt: string | null;
   isPending?: boolean | string; // Pending approval status
+  /** Registration fee payment status — e.g. "Paid" | "Not Paid" */
+  paymentStatus?: string | null;
+  /** Registration fee payment method — e.g. "Transfer/card" | "Cash" | "Not Paid" */
+  paymentMethod?: string | null;
   createdAt: string;
   updatedAt: string;
   businessCategoryName: string | null;

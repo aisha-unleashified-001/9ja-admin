@@ -26,11 +26,17 @@ import {
   RotateCcw,
   Pencil,
   ShoppingBag,
+  CreditCard,
 } from "lucide-react";
 import { apiService } from "../services/api";
 import type { VendorSignup, Bank } from "../types/api";
 import { config } from "@/config/env";
 import toast from "react-hot-toast";
+import {
+  formatVendorPaymentMethod,
+  getVendorPaymentFields,
+  normalizeVendorPaymentStatus,
+} from "../utils/vendorPayment";
 
 export function VendorSignupDetail() {
   const { id: vendorId } = useParams<{ id: string }>();
@@ -246,6 +252,15 @@ export function VendorSignupDetail() {
   const statusInfo = getStatusInfo(signup.isActive);
   const StatusIcon = statusInfo.icon;
 
+  const { paymentStatus: rawPaymentStatus, paymentMethod: rawPaymentMethod } =
+    getVendorPaymentFields(signup);
+  const paymentStatusLabel = normalizeVendorPaymentStatus(rawPaymentStatus);
+  const paymentMethodLabel = formatVendorPaymentMethod(
+    rawPaymentMethod,
+    rawPaymentStatus
+  );
+  const isPaymentPaid = paymentStatusLabel === "Paid";
+
   // Safely derive bank/account details from the raw API payload.
   // The backend may use different field names, so we defensively check several.
   const rawSignup = signup as unknown as Record<string, unknown>;
@@ -387,7 +402,7 @@ export function VendorSignupDetail() {
       </div>
 
       {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className={`border-2 ${statusInfo.className}`}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -417,6 +432,23 @@ export function VendorSignupDetail() {
                   <span className="font-medium">Pending Approval</span>
                 </>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`border-2 ${
+            isPaymentPaid
+              ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+              : "text-orange-700 bg-orange-50 border-orange-200"
+          }`}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              <span className="font-medium">
+                Payment Status: {paymentStatusLabel}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -495,6 +527,15 @@ export function VendorSignupDetail() {
                 Vendor ID
               </label>
               <p className="text-sm font-mono">{signup.vendorId}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">
+                Payment Method
+              </label>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm">{paymentMethodLabel}</p>
+              </div>
             </div>
           </CardContent>
         </Card>

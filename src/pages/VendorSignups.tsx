@@ -24,6 +24,10 @@ import {
 import { apiService } from "../services/api";
 import type { VendorSignup } from "../types/api";
 import { vendorSignupsToCSV, downloadCSV } from "../utils/csvExport";
+import {
+  getVendorPaymentFields,
+  normalizeVendorPaymentStatus,
+} from "../utils/vendorPayment";
 
 type StatusFilterKey = "active" | "approved" | "pending" | "suspended";
 type StatusFilters = Record<StatusFilterKey, boolean>;
@@ -228,6 +232,21 @@ export function VendorSignups() {
     ) : null;
   };
 
+  const getPaymentStatusBadge = (signup: VendorSignup) => {
+    const { paymentStatus } = getVendorPaymentFields(signup);
+    const label = normalizeVendorPaymentStatus(paymentStatus);
+
+    return label === "Paid" ? (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+        Paid
+      </span>
+    ) : (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+        Not Paid
+      </span>
+    );
+  };
+
   const totalItems = filteredSignups.length;
   const totalPages = Math.ceil(totalItems / perPage) || 1;
   const paginatedSignups = filteredSignups.slice(
@@ -418,6 +437,7 @@ export function VendorSignups() {
                           <h3 className="font-medium">{signup.fullName}</h3>
                           {getStatusBadge(signup.isActive)}
                           {getApprovalBadge(signup.isApproved)}
+                          {getPaymentStatusBadge(signup)}
                           {getSuspensionBadge(signup.isSuspended)}
                         </div>
 
