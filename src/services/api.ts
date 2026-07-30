@@ -25,6 +25,7 @@ import type {
   NotificationResponse,
   OverviewStats,
   UpdateVendorAccountInfoRequest,
+  UpdateVendorPaymentStatusRequest,
   Bank,
   AnalyticsData,
   AnalyticsRevenueSeries,
@@ -351,6 +352,19 @@ class ApiService {
   ): Promise<ApiResponse<{ message: string }>> {
     return this.request<ApiResponse<{ message: string }>>(
       `/backoffice/vendors/${vendorId}/update-account-info`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async updateVendorPaymentStatus(
+    vendorId: string,
+    data: UpdateVendorPaymentStatusRequest
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.request<ApiResponse<{ message: string }>>(
+      `/backoffice/vendors/signup/${vendorId}/payment-status`,
       {
         method: "POST",
         body: JSON.stringify(data),

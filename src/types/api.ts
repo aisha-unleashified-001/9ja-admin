@@ -347,6 +347,10 @@ export interface UpdateVendorAccountInfoRequest {
   settlementBankName: string;
 }
 
+export interface UpdateVendorPaymentStatusRequest {
+  isPaid: boolean;
+}
+
 export interface Bank {
   id: number;
   name: string;

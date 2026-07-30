@@ -65,6 +65,7 @@ export function VendorSignupDetail() {
   const [banks, setBanks] = useState<Bank[] | null>(null);
   const [banksLoading, setBanksLoading] = useState(false);
   const [bankSuggestions, setBankSuggestions] = useState<Bank[]>([]);
+  const [updatingPaymentStatus, setUpdatingPaymentStatus] = useState(false);
 
   const fetchSignup = async () => {
     if (!vendorId) return;
@@ -342,6 +343,33 @@ export function VendorSignupDetail() {
     }
   };
 
+  const handleTogglePaymentStatus = async () => {
+    if (!vendorId || !signup) return;
+
+    const newIsPaid = !isPaymentPaid;
+    setUpdatingPaymentStatus(true);
+    try {
+      await apiService.updateVendorPaymentStatus(vendorId, {
+        isPaid: newIsPaid,
+      });
+      toast.success(
+        newIsPaid
+          ? "Payment marked as paid."
+          : "Payment marked as not paid."
+      );
+      await fetchSignup();
+    } catch (err) {
+      console.error("Failed to update vendor payment status:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to update payment status. Please try again."
+      );
+    } finally {
+      setUpdatingPaymentStatus(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-center justify-between">
@@ -444,11 +472,30 @@ export function VendorSignupDetail() {
           }`}
         >
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              <span className="font-medium">
-                Payment Status: {paymentStatusLabel}
-              </span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                <span className="font-medium">
+                  Payment Status: {paymentStatusLabel}
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isPaymentPaid}
+                aria-label={`Mark payment as ${isPaymentPaid ? "not paid" : "paid"}`}
+                disabled={updatingPaymentStatus}
+                onClick={handleTogglePaymentStatus}
+                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isPaymentPaid ? "bg-emerald-600" : "bg-orange-500"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    isPaymentPaid ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
             </div>
           </CardContent>
         </Card>
